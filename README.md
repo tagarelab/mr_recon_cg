@@ -1,1 +1,3 @@
-# mr_recon_cg
+# MR Reconstruction Code in Python
+
+## Currently creating conjugate gradient code
