@@ -12,6 +12,7 @@ import numpy as np
 def complex2array(x):
     """
     Convert a complex array to a real array.
+    This function is drafted by Github Copilot and edited & tested by the author.
 
     Parameters:
     - x (numpy.ndarray): The input complex array.
@@ -25,6 +26,7 @@ def complex2array(x):
 def array2complex(x):
     """
     Convert a real array to a complex array.
+    This function is drafted by Github Copilot and edited & tested by the author.
 
     Parameters:
     - x (numpy.ndarray): The input real array.

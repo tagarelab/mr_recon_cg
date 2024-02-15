@@ -17,11 +17,21 @@ if __name__ == '__main__':
 class TestAlgebra(unittest.TestCase):
 
     def test_complex2array(self):
+        """
+        Test the complex2array function
+        This function is drafted by Github Copilot and edited & tested by the author.
+        :return:
+        """
         x = np.array([[1 + 1.j, 2 + 2.j, 3 + 3.j], [4 + 4.j, 5 + 5.j, 6 + 6.j]])
         y = np.array([[1, 2, 3, 1, 2, 3], [4, 5, 6, 4, 5, 6]])
         np.testing.assert_array_equal(algebra.complex2array(x), y)
 
     def test_array2complex(self):
+        """
+        Test the array2complex function
+        This function is drafted by Github Copilot and edited & tested by the author.
+        :return:
+        """
         x = np.array([[1 + 1.j, 2 + 2.j, 3 + 3.j], [4 + 4.j, 5 + 5.j, 6 + 6.j]])
         y = np.array([[1, 2, 3, 1, 2, 3], [4, 5, 6, 4, 5, 6]])
         np.testing.assert_array_equal(algebra.array2complex(y), x)

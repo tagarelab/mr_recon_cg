@@ -13,6 +13,7 @@ def validate_equal(a,b,Name_a = "First Item", Name_b = "Second Item", atol = 1e-
                    make_plot = False):
     """
     Validate if two items are equal in absolute value
+    This function is drafted by Github Copilot and edited & tested by the author.
     """
     if np.allclose(abs(a), abs(b), atol = atol, rtol = rtol, equal_nan = equal_nan):
         print(f"{Name_a} and {Name_b} are equal in absolute value")
