@@ -1,5 +1,6 @@
 # My ignores
 data/
+.ipynb_checkpoints/
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/pycharm
