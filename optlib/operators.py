@@ -89,6 +89,18 @@ class real_fftn_op:
         return np.real(np.fft.ifftn(np.fft.ifftshift(x)))
 
 
+class fftn_op:
+    """
+        FFT of real valued vectors and matrices
+    """
+
+    def forward(self, x):
+        return np.fft.fftshift(np.fft.fftn(x))
+
+    def transpose(self, x):
+        return np.fft.ifftn(np.fft.ifftshift(x))
+
+
 class composite_op:
     """
        Creates a composite operator 
