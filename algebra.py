@@ -16,6 +16,7 @@ from scipy.interpolate import RegularGridInterpolator
 def interp_3dmat(M, x_axis, y_axis, z_axis, x_pts, y_pts, z_pts, method='linear'):
     """
     Interpolate a 3D matrix to new dimensions x, y, and z.
+    This function is adapted from a MATLAB function by Github Copilot and edited & tested by the author.
 
     Inputs:
     - M: Input 3D matrix.
@@ -44,6 +45,8 @@ def vec2mesh(mag, x_coord, y_coord, z_coord, x_dim, y_dim, z_dim):
     """
     Transform from vector representation to mesh representation,
     assuming even interpolation.
+    This function is adapted from a MATLAB function by Github Copilot and edited & tested by the author.
+
     """
     if len(mag) != x_dim * y_dim * z_dim:
         raise ValueError('Error: target dimensions does not meet vector dimension.')
