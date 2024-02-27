@@ -93,7 +93,7 @@ def c_grad_lin_inner(y,A,x0,max_iter=6,f_tol=1e-5):
         p_k=p_k1
         r_k=r_k1
         res_norm_sq=norm_sq(r_k)
-    print(f"CG: step={k} res_norm={np.sqrt(res_norm_sq)} ")
+   # print(f"CG: step={k} res_norm={np.sqrt(res_norm_sq)} ")
     return x_k,k>=max_iter
 
 def c_grad_lin(b,ATA,x0,max_iter=30,inner_max_iter=6,f_tol=1e-5):
@@ -103,14 +103,14 @@ def c_grad_lin(b,ATA,x0,max_iter=30,inner_max_iter=6,f_tol=1e-5):
         numerical round off problems in the inner loop
     """
     x,iter_flag=c_grad_lin_inner(b,ATA,x0,max_iter=inner_max_iter,f_tol=f_tol)
-    k=0
+    k=1
     while ((k<max_iter) & (iter_flag==True)): #Restart the cg
         x,iter_flag=c_grad_lin_inner(b,ATA,x,max_iter=inner_max_iter,f_tol=f_tol)
         iter_flag=iter_flag|(k>=max_iter) #Check if either criteria is met
         k=k+1
     return x,iter_flag
 
-def solve_lin_cg(y,A,x0,B=op.zero_op(),c=0,max_iter=6,f_tol=1e-5):
+def solve_lin_cg(y,A,x0,B=op.zero_op(),c=0,max_iter=6,inner_max_iter=6,f_tol=1e-5):
     """
         Solves linear equation ATAx + B^TBx = A^Ty+c
         To use this to solve linear equation Ax=y for any A (need not be pos. def.)
@@ -119,7 +119,7 @@ def solve_lin_cg(y,A,x0,B=op.zero_op(),c=0,max_iter=6,f_tol=1e-5):
     """
     ATA=lhs_op(A,B) #Get ATA
     b=A.transpose(y)+c #Calculate b
-    return c_grad_lin(b,ATA,x0,max_iter=max_iter,f_tol=f_tol)
+    return c_grad_lin(b,ATA,x0,max_iter=max_iter,inner_max_iter=inner_max_iter,f_tol=f_tol)
 
 def solve_L2_min(y,A,x0,B=op.zero_op(),max_iter=6,f_tol=1e-5):
     """
