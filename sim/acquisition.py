@@ -6,7 +6,25 @@
    Additional Notes: 
 """
 
+import numpy as np
+
 __all__ = ['slice_select']
+
+
+def B1_effective(B1, B0):
+    """
+    Calculate the effective B1 field
+    This function is adapted from a MATLAB function by Github Copilot and edited & tested by the author.
+
+    Parameters:
+    - B1 (numpy.ndarray): The B1 field.
+    - B0 (numpy.ndarray): The B0 field.
+
+    Returns:
+    - numpy.ndarray: The effective B1 field.
+    """
+
+    return B1 - np.dot(B0, B1) / np.linalg.norm(B0) ** 2 * B0
 
 
 def slice_select(b0, ctr_mag, slc_tkns):
