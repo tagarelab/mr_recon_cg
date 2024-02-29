@@ -17,37 +17,6 @@ import algebra as algb
 __all__ = ['save_dict', 'save_single_mat', 'load_single_mat', 'load_list_mat']
 
 
-def read_b1(path, intrp_x, intrp_y, intrp_z, FOV, scale=1):
-    # Read the data
-    B1_data = pd.read_csv(path, header=None)
-
-    # Extract coordinates and magnetic field components
-    B1_X_coord = B1_data.iloc[:, 0].values
-    B1_Y_coord = B1_data.iloc[:, 1].values
-    B1_Z_coord = B1_data.iloc[:, 2].values
-    X_data = B1_data.iloc[:, 3].values
-    Y_data = B1_data.iloc[:, 4].values
-    Z_data = B1_data.iloc[:, 5].values
-
-    # Calculate the magnitude of the magnetic field and apply a scaling factor
-    nubo_b1 = np.sqrt(X_data ** 2 + Y_data ** 2 + Z_data ** 2)
-    nubo_b1 = scale * nubo_b1
-
-    # Create a 3D grid for the magnetic field data
-    x_M = np.linspace(B1_X_coord.min(), B1_X_coord.max(), 11)
-    y_M = np.linspace(B1_Y_coord.min(), B1_Y_coord.max(), 11)
-    z_M = np.linspace(B1_Z_coord.min(), B1_Z_coord.max(), 11)
-    nubo_b1_mesh, _, _, _ = algebra.vec2mesh(nubo_b1, B1_X_coord, B1_Y_coord, B1_Z_coord, 11, 11, 11)
-
-    nubo_B1_intrp, b1_X_intrp, b1_Y_intrp, b1_Z_intrp = algb.interp_3dmat(nubo_b1_mesh, x_M, y_M, z_M, intrp_x,
-                                                                          intrp_y, intrp_z)
-
-    b1_X_intrp = b1_X_intrp / 200 * FOV
-    b1_Y_intrp = b1_Y_intrp / 200 * FOV
-    b1_Z_intrp = b1_Z_intrp / 200 * FOV
-
-    return nubo_B1_intrp, b1_X_intrp, b1_Y_intrp, b1_Z_intrp
-
 
 def read_nubo_b0(path, intrp_x, intrp_y, intrp_z, FOV=0.4, scale=2.104):
     # TODO: generalize this function
