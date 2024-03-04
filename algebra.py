@@ -13,6 +13,26 @@ import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 
 
+def interp_by_pts(M, x_axis, y_axis, z_axis, intrp_pts, method='linear'):
+    interpolator = RegularGridInterpolator((x_axis, y_axis, z_axis), M, method=method)
+    interpolated_matrix = interpolator(intrp_pts)
+    return interpolated_matrix
+
+
+def gen_interp_pts(x_intrp, y_intrp, z_intrp):
+    # Dimensions of the expanded field taken from the raw data
+    intrp_pts = np.array(np.meshgrid(x_intrp, y_intrp, z_intrp, indexing='ij')).T
+    return intrp_pts
+
+
+def gen_interp_axis(x_axis, y_axis, z_axis, x_pts, y_pts, z_pts):
+    # Dimensions of the expanded field taken from the raw data
+    x_intrp = np.linspace(x_axis[0], x_axis[-1], x_pts)
+    y_intrp = np.linspace(y_axis[0], y_axis[-1], y_pts)
+    z_intrp = np.linspace(z_axis[0], z_axis[-1], z_pts)
+    return x_intrp, y_intrp, z_intrp
+
+
 def interp_3dmat(M, x_axis, y_axis, z_axis, x_pts, y_pts, z_pts, method='linear'):
     """
     Interpolate a 3D matrix to new dimensions x, y, and z.
@@ -28,15 +48,9 @@ def interp_3dmat(M, x_axis, y_axis, z_axis, x_pts, y_pts, z_pts, method='linear'
     - interpolated_matrix: Interpolated 3D matrix with dimensions x, y, z.
     """
 
-    # Dimensions of the expanded field taken from the raw data
-    x_intrp = np.linspace(x_axis[0], x_axis[-1], x_pts)
-    y_intrp = np.linspace(y_axis[0], y_axis[-1], y_pts)
-    z_intrp = np.linspace(z_axis[0], z_axis[-1], z_pts)
-    intrp_pts = np.array(np.meshgrid(x_intrp, y_intrp, z_intrp, indexing='ij')).T
-
-    # Interpolate the expanded field
-    interpolator = RegularGridInterpolator((x_axis, y_axis, z_axis), M, method=method)
-    interpolated_matrix = interpolator(intrp_pts)
+    x_intrp, y_intrp, z_intrp = gen_interp_axis(x_axis, y_axis, z_axis, x_pts, y_pts, z_pts)
+    intrp_pts = gen_interp_pts(x_intrp, y_intrp, z_intrp)
+    interpolated_matrix = interp_by_pts(M, x_axis, y_axis, z_axis, intrp_pts, method=method)
 
     return interpolated_matrix, x_intrp, y_intrp, z_intrp
 
@@ -64,7 +78,7 @@ def vec2mesh(mag, x_coord, y_coord, z_coord, x_dim, y_dim, z_dim):
                 zz]))
                 mag_mesh[xx, yy, zz] = mag[ind]
 
-    return mag_mesh, X_M, Y_M, Z_M
+    return mag_mesh, x_M, y_M, z_M
 
 
 def complex2array(x):

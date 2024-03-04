@@ -13,6 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import visualization as vis
 import algebra as algb
+import pandas as pd
 
 # # %% parameters
 # x = np.array([-3, -4, -2])
@@ -41,9 +42,54 @@ import algebra as algb
 
 # %% read B0
 path = 'sim_inputs/magnetData.csv'
-nubo_b0_raw, b0_X, b0_Y, b0_Z = mr_io.read_nubo_b0(path=path, intrp_x=30, intrp_y=30, intrp_z=30)
+intrp_x = 31
+intrp_y = 31
+intrp_z = 31
 
-vis.scatter3d(b0_X, b0_Y, b0_Z, nubo_b0_raw)
+# b0_X = np.linspace(-0.2, 0.2, intrp_x)
+# b0_Y = np.linspace(-0.2, 0.2, intrp_y)
+# b0_Z = np.linspace(-0.2, 0.2, intrp_z)
+b0_X = np.linspace(-120, 120, intrp_x)
+b0_Y = np.linspace(-120, 120, intrp_y)
+b0_Z = np.linspace(-120, 120, intrp_z)
+
+# Read the data
+B0_data = pd.read_csv(path, header=None)
+
+FOV = 0.4
+scale_b0 = 2.104
+
+# Extract coordinates and magnetic field components
+# B0_X_coord = B0_data.iloc[:, 0].values * 0.0002
+# B0_Y_coord = B0_data.iloc[:, 1].values * 0.0002
+# B0_Z_coord = B0_data.iloc[:, 2].values * 0.0002
+B0_X_coord = B0_data.iloc[:, 0].values * 2
+B0_Y_coord = B0_data.iloc[:, 1].values * 2
+B0_Z_coord = B0_data.iloc[:, 2].values * 2
+# B0_X_coord = B0_data.iloc[:, 0].values
+# B0_Y_coord = B0_data.iloc[:, 1].values
+# B0_Z_coord = B0_data.iloc[:, 2].values
+# X_data = B0_data.iloc[:, 3].values
+# Y_data = B0_data.iloc[:, 4].values
+# Z_data = B0_data.iloc[:, 5].values
+
+B0_intrp = np.zeros((3, intrp_x, intrp_y, intrp_z))
+b0_X_intrp = np.zeros((intrp_x, intrp_y, intrp_z))
+b0_Y_intrp = np.zeros((intrp_x, intrp_y, intrp_z))
+b0_Z_intrp = np.zeros((intrp_x, intrp_y, intrp_z))
+intrp_pts = algb.gen_interp_pts(b0_X, b0_Y, b0_Z)
+
+for i in range(3):
+    nubo_b0 = B0_data.iloc[:, 3 + i].values
+    nubo_b0 = scale_b0 * nubo_b0
+    nubo_b0_mesh, x_M, y_M, z_M = algb.vec2mesh(nubo_b0, B0_X_coord, B0_Y_coord, B0_Z_coord, 11, 11, 11)
+    # vis.scatter3d(x_M, y_M, z_M, nubo_b0_mesh)
+    B0_intrp[i, :, :, :] = algb.interp_by_pts(nubo_b0_mesh, x_M, y_M, z_M, intrp_pts, method='linear')
+
+nubo_b0_raw = B0_intrp
+# nubo_b0_raw, b0_X, b0_Y, b0_Z = mr_io.read_nubo_b0(path=path, intrp_x=intrp_x, intrp_y=intrp_y, intrp_z=intrp_z)
+nubo_b0_amp = np.linalg.norm(nubo_b0_raw, axis=0)
+vis.scatter3d(b0_X, b0_Y, b0_Z, nubo_b0_amp)
 
 # %% slice selection
 # Constants
@@ -60,36 +106,43 @@ nubo_b0 = nubo_b0_raw * DC  # slice strength
 # Call slice_select function
 id = acq.slice_select(nubo_b0, ctr_mag, slc_tkns_mag)
 
-vis.scatter3d(b0_X, b0_Y, b0_Z, nubo_b0_raw, mask=id)
+vis.scatter3d(b0_X, b0_Y, b0_Z, nubo_b0_amp, mask=id)
 
 # %% read B1
 path = 'sim_inputs/'
 filename = 'B1_ROI_240mm_240mm_240mm'
-intrp_x = 30
-intrp_y = 30
-intrp_z = 30
 FOV = 0.24
 scale = 1
 
-# nubo_B1_intrp, b1_X_intrp, b1_Y_intrp, b1_Z_intrp = read_b1(filename=filename, path=path, intrp_x=30, intrp_y=30,
-#                                                             intrp_z=30, FOV=0.24)
-B1_data = mr_io.load_single_mat(name=filename, path=path)['B1']
-
-# Calculate the magnitude of the magnetic field and apply a scaling factor
-nubo_b1 = B1_data
-nubo_b1 = scale * nubo_b1
-
 # Create a 3D grid for the magnetic field data
-x_M = np.linspace(-0.12, +0.12, 31)
-y_M = np.linspace(-0.12, +0.12, 31)
-z_M = np.linspace(-0.12, +0.12, 31)
+x_b1_raw = np.linspace(-120, +120, 31)
+y_b1_raw = np.linspace(-120, +120, 31)
+z_b1_raw = np.linspace(-120, +120, 31)
 
-nubo_B1_intrp, b1_X_intrp, b1_Y_intrp, b1_Z_intrp = algb.interp_3dmat(nubo_b1, x_M, y_M, z_M, intrp_x,
-                                                                      intrp_y, intrp_z)
+B1_data = mr_io.load_single_mat(name=filename, path=path)['B1']
+B1_intrp = np.zeros((3, intrp_x, intrp_y, intrp_z))
+
+for i in range(3):
+    # Calculate the magnitude of the magnetic field and apply a scaling factor
+    nubo_b1 = B1_data[i, :, :, :]
+    nubo_b1 = scale * nubo_b1
+
+    B1_intrp[i, :, :, :] = algb.interp_by_pts(nubo_b1, x_b1_raw, y_b1_raw, z_b1_raw, intrp_pts, method='linear')
 
 # %% plot B1
-vis.scatter3d(b1_X_intrp, b1_Y_intrp, b1_Z_intrp, nubo_B1_intrp)
-vis.scatter3d(b1_X_intrp, b1_Y_intrp, b1_Z_intrp, nubo_B1_intrp, mask=id)
+B1_intrp_amp = np.linalg.norm(B1_intrp, axis=0)
+vis.scatter3d(b0_X, b0_Y, b0_Z, B1_intrp_amp)
+vis.scatter3d(b0_X, b0_Y, b0_Z, B1_intrp_amp, mask=id)
 
 # %% effective B1
-B1_eff = acq.B1_effective(nubo_B1_intrp, nubo_b0)
+B1_eff = np.zeros((3, intrp_x, intrp_y, intrp_z))
+for i in range(intrp_x):
+    for j in range(intrp_y):
+        for k in range(intrp_z):
+            B1_eff[:, i, j, k] = acq.B1_effective(B1_intrp[:, i, j, k], B0_intrp[:, i, j, k])
+B1_eff_amp = np.linalg.norm(B1_eff, axis=0)
+vis.scatter3d(b0_X, b0_Y, b0_Z, B1_eff_amp)
+vis.scatter3d(b0_X, b0_Y, b0_Z, B1_eff_amp, mask=id)
+ratio = B1_eff_amp / B1_intrp_amp
+vis.scatter3d(b0_X, b0_Y, b0_Z, ratio)
+vis.scatter3d(b0_X, b0_Y, b0_Z, ratio, mask=id)

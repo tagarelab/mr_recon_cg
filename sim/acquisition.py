@@ -41,6 +41,8 @@ def slice_select(b0, ctr_mag, slc_tkns):
     - numpy.ndarray: The slice selection mask.
     """
 
+    b0 = np.linalg.norm(b0, axis=0)  # input b0 is 4D, but we only need the magnitude
+
     val_1 = ctr_mag - slc_tkns / 2
     val_2 = ctr_mag + slc_tkns / 2
 

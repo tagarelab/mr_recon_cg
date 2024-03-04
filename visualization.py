@@ -36,7 +36,7 @@ def scatter3d(B0_SI, B0_LR, B0_AP, grad, mask=None):
         Z_M = Z_M[mask]
         grad = grad[mask]
 
-    scatter = ax.scatter(X_M, Y_M, Z_M, c=grad * 1e3, s=1)
+    scatter = ax.scatter(X_M, Y_M, Z_M, c=grad, s=1)
     plt.colorbar(scatter)
 
     # ax.set_title("Liver Gradient at "+grad_str+" mT/m")
