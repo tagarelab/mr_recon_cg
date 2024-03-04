@@ -10,7 +10,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 
 
-def scatter3d(B0_SI, B0_LR, B0_AP, grad, mask=None):
+def scatter3d(B0_LR, B0_SI, B0_AP, grad, mask=None, title=None):
     """
     3D scatter plot
     This function is adapted from a MATLAB function by Github Copilot and edited & tested by the author.
@@ -28,7 +28,7 @@ def scatter3d(B0_SI, B0_LR, B0_AP, grad, mask=None):
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    X_M, Y_M, Z_M = np.meshgrid(B0_SI, B0_LR, B0_AP, indexing='ij')
+    X_M, Y_M, Z_M = np.meshgrid(B0_LR, B0_SI, B0_AP, indexing='ij')
 
     if mask is not None:
         X_M = X_M[mask]
@@ -40,9 +40,11 @@ def scatter3d(B0_SI, B0_LR, B0_AP, grad, mask=None):
     plt.colorbar(scatter)
 
     # ax.set_title("Liver Gradient at "+grad_str+" mT/m")
-    ax.set_xlabel('SI (m)')
-    ax.set_ylabel('LR (m)')
-    ax.set_zlabel('AP (m)')
+    ax.set_xlabel('LR (mm)')
+    ax.set_ylabel('SI (mm)')
+    ax.set_zlabel('AP (mn)')
     ax.axis('equal')
 
+    if title is not None:
+        ax.set_title(title)
     plt.show()

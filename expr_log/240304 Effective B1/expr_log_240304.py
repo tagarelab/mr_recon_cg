@@ -63,9 +63,9 @@ scale_b0 = 2.104
 # B0_X_coord = B0_data.iloc[:, 0].values * 0.0002
 # B0_Y_coord = B0_data.iloc[:, 1].values * 0.0002
 # B0_Z_coord = B0_data.iloc[:, 2].values * 0.0002
-B0_X_coord = B0_data.iloc[:, 0].values * 2
-B0_Y_coord = B0_data.iloc[:, 1].values * 2
-B0_Z_coord = B0_data.iloc[:, 2].values * 2
+B0_X_coord = B0_data.iloc[:, 0].values * 2  # mm
+B0_Y_coord = B0_data.iloc[:, 1].values * 2  # mm
+B0_Z_coord = B0_data.iloc[:, 2].values * 2  # mm
 # B0_X_coord = B0_data.iloc[:, 0].values
 # B0_Y_coord = B0_data.iloc[:, 1].values
 # B0_Z_coord = B0_data.iloc[:, 2].values
@@ -84,6 +84,7 @@ for i in range(3):
     nubo_b0 = scale_b0 * nubo_b0
     nubo_b0_mesh, x_M, y_M, z_M = algb.vec2mesh(nubo_b0, B0_X_coord, B0_Y_coord, B0_Z_coord, 11, 11, 11)
     # vis.scatter3d(x_M, y_M, z_M, nubo_b0_mesh)
+    nubo_b0_mesh = nubo_b0_mesh.T
     B0_intrp[i, :, :, :] = algb.interp_by_pts(nubo_b0_mesh, x_M, y_M, z_M, intrp_pts, method='linear')
 
 nubo_b0_raw = B0_intrp
@@ -97,7 +98,7 @@ gamma = 42.58e6  # Hz/T
 read_mag = 0.046  # T
 DC = 0.1  # percent DC when polarizing
 ctr_mag = read_mag  # slice selection gradient
-slc_tkns_frq = 100e3 * 2  # Hz
+slc_tkns_frq = 10e3 * 2  # Hz
 slc_tkns_mag = slc_tkns_frq / gamma  # T
 
 # Adjust nubo_b0
@@ -106,23 +107,24 @@ nubo_b0 = nubo_b0_raw * DC  # slice strength
 # Call slice_select function
 id = acq.slice_select(nubo_b0, ctr_mag, slc_tkns_mag)
 
-vis.scatter3d(b0_X, b0_Y, b0_Z, nubo_b0_amp, mask=id)
+vis.scatter3d(b0_X, b0_Y, b0_Z, nubo_b0_amp, mask=id, title='B0 (T)')
 
 # %% read B1
 path = 'sim_inputs/'
 filename = 'B1_ROI_240mm_240mm_240mm'
 FOV = 0.24
 scale = 1
+x_shfit = 60
 
 # Create a 3D grid for the magnetic field data
-x_b1_raw = np.linspace(-120, +120, 31)
+x_b1_raw = np.linspace(-120, +120, 31) + x_shfit
 y_b1_raw = np.linspace(-120, +120, 31)
 z_b1_raw = np.linspace(-120, +120, 31)
 
 B1_data = mr_io.load_single_mat(name=filename, path=path)['B1']
 B1_intrp = np.zeros((3, intrp_x, intrp_y, intrp_z))
 
-for i in range(3):
+for i in [0, 1, 2]:
     # Calculate the magnitude of the magnetic field and apply a scaling factor
     nubo_b1 = B1_data[i, :, :, :]
     nubo_b1 = scale * nubo_b1
@@ -131,8 +133,11 @@ for i in range(3):
 
 # %% plot B1
 B1_intrp_amp = np.linalg.norm(B1_intrp, axis=0)
-vis.scatter3d(b0_X, b0_Y, b0_Z, B1_intrp_amp)
-vis.scatter3d(b0_X, b0_Y, b0_Z, B1_intrp_amp, mask=id)
+B1_mask = (B1_intrp_amp > 0.002)
+
+vis.scatter3d(b0_X, b0_Y, b0_Z, B1_intrp_amp, title='B1 (T)')
+vis.scatter3d(b0_X, b0_Y, b0_Z, B1_intrp_amp, mask=id & B1_mask, title='B1 (T)')
+vis.scatter3d(b0_X, b0_Y, b0_Z, B1_intrp_amp, mask=B1_mask, title='B1 (T)')
 
 # %% effective B1
 B1_eff = np.zeros((3, intrp_x, intrp_y, intrp_z))
@@ -142,7 +147,15 @@ for i in range(intrp_x):
             B1_eff[:, i, j, k] = acq.B1_effective(B1_intrp[:, i, j, k], B0_intrp[:, i, j, k])
 B1_eff_amp = np.linalg.norm(B1_eff, axis=0)
 vis.scatter3d(b0_X, b0_Y, b0_Z, B1_eff_amp)
-vis.scatter3d(b0_X, b0_Y, b0_Z, B1_eff_amp, mask=id)
-ratio = B1_eff_amp / B1_intrp_amp
-vis.scatter3d(b0_X, b0_Y, b0_Z, ratio)
-vis.scatter3d(b0_X, b0_Y, b0_Z, ratio, mask=id)
+vis.scatter3d(b0_X, b0_Y, b0_Z, B1_eff_amp, mask=id & B1_mask)
+vis.scatter3d(b0_X, b0_Y, b0_Z, B1_eff_amp, mask=B1_mask)
+ratio_perc = B1_eff_amp / B1_intrp_amp * 100
+vis.scatter3d(b0_X, b0_Y, b0_Z, ratio_perc, title='Effective B1 / B1 (%)')
+vis.scatter3d(b0_X, b0_Y, b0_Z, ratio_perc, mask=id & B1_mask, title='Effective B1 / B1 (%)')
+vis.scatter3d(b0_X, b0_Y, b0_Z, ratio_perc, mask=B1_mask, title='Effective B1 / B1 (%)')
+
+# %% flip angle
+flip_angle_deg = B1_eff_amp / np.max(B1_eff_amp[id & B1_mask]) * 90
+vis.scatter3d(b0_X, b0_Y, b0_Z, flip_angle_deg, title='Flip Angle (degree)')
+vis.scatter3d(b0_X, b0_Y, b0_Z, flip_angle_deg, mask=id & B1_mask, title='Flip Angle (degree)')
+vis.scatter3d(b0_X, b0_Y, b0_Z, flip_angle_deg, mask=B1_mask, title='Flip Angle (degree)')

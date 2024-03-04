@@ -15,6 +15,10 @@ from scipy.interpolate import RegularGridInterpolator
 
 def interp_by_pts(M, x_axis, y_axis, z_axis, intrp_pts, method='linear'):
     interpolator = RegularGridInterpolator((x_axis, y_axis, z_axis), M, method=method)
+    # check if the interpolation points are within the range of the raw data
+    if np.any(intrp_pts < np.array([x_axis[0], y_axis[0], z_axis[0]])) or np.any(
+            intrp_pts > np.array([x_axis[-1], y_axis[-1], z_axis[-1]])):
+        raise ValueError('Error: Interpolation points are out of range of the raw data.')
     interpolated_matrix = interpolator(intrp_pts)
     return interpolated_matrix
 
