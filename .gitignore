@@ -2,7 +2,6 @@
 data/
 .ipynb_checkpoints/
 .idea
-optlib/__pycache__/
 __pycache__/
 
 
