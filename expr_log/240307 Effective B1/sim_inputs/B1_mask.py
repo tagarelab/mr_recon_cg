@@ -7,7 +7,7 @@ Created on Tue Mar  5 17:05:24 2024
 
 import numpy as np
 import matplotlib.pyplot as plt
-import addcopyfighandler
+# import addcopyfighandler
 from scipy.io import loadmat
 
 data = loadmat("B1_51.mat")
@@ -48,3 +48,5 @@ ax3 = fig.add_subplot(133)
 
 mask = ax3.imshow(np.flipud(B1_masked[2, :, nslice, :]), cmap='jet')
 ax3.axis('off')
+
+fig.show()

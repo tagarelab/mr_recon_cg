@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import visualization as vis
 import algebra as algb
 import pandas as pd
+from sim import masks as mk
 
 # # %% parameters
 # x = np.array([-3, -4, -2])
@@ -42,16 +43,20 @@ import pandas as pd
 
 # %% read B0
 path = 'sim_inputs/magnetData.csv'
-intrp_x = 31
-intrp_y = 31
-intrp_z = 31
+intrp_x = 51
+intrp_y = 51
+intrp_z = 51
+
+xlim = [-120, 120]
+ylim = [-120, 120]
+zlim = [-120, 120]
 
 # b0_X = np.linspace(-0.2, 0.2, intrp_x)
 # b0_Y = np.linspace(-0.2, 0.2, intrp_y)
 # b0_Z = np.linspace(-0.2, 0.2, intrp_z)
-b0_X = np.linspace(-120, 120, intrp_x)
-b0_Y = np.linspace(-120, 120, intrp_y)
-b0_Z = np.linspace(-120, 120, intrp_z)
+b0_X = np.linspace(xlim[0], xlim[1], intrp_x)
+b0_Y = np.linspace(ylim[0], ylim[1], intrp_y)
+b0_Z = np.linspace(zlim[0], zlim[1], intrp_z)
 
 # Read the data
 B0_data = pd.read_csv(path, header=None)
@@ -90,7 +95,7 @@ for i in range(3):
 nubo_b0_raw = B0_intrp
 # nubo_b0_raw, b0_X, b0_Y, b0_Z = mr_io.read_nubo_b0(path=path, intrp_x=intrp_x, intrp_y=intrp_y, intrp_z=intrp_z)
 nubo_b0_amp = np.linalg.norm(nubo_b0_raw, axis=0)
-vis.scatter3d(b0_X, b0_Y, b0_Z, nubo_b0_amp)
+vis.scatter3d(b0_X, b0_Y, b0_Z, nubo_b0_amp, xlim=xlim, ylim=ylim, zlim=zlim, title='B0 (T)')
 
 # %% slice selection
 # Constants
@@ -104,25 +109,32 @@ slc_tkns_mag = slc_tkns_frq / gamma  # T
 # Adjust nubo_b0
 nubo_b0 = nubo_b0_raw * DC  # slice strength
 
-# Call slice_select function
-id = acq.slice_select(nubo_b0, ctr_mag, slc_tkns_mag)
+# Slice Selection
+slice = acq.slice_select(nubo_b0, ctr_mag, slc_tkns_mag)
 
-vis.scatter3d(b0_X, b0_Y, b0_Z, nubo_b0_amp, mask=id, title='B0 (T)')
+# Cut in SI direction
+X_M, Y_M, Z_M = np.meshgrid(b0_X, b0_Y, b0_Z, indexing='ij')
+SI_cut = (Y_M > -3) & (Y_M < 3)
+LR_cut = (X_M > -3) & (X_M < 3)
+
+# Visualize
+vis.scatter3d(b0_X, b0_Y, b0_Z, nubo_b0_amp, xlim=xlim, ylim=ylim, zlim=zlim, mask=slice, title='B0 (T)')
+vis.scatter3d(b0_X, b0_Y, b0_Z, nubo_b0_amp, xlim=xlim, ylim=ylim, zlim=zlim, mask=SI_cut, title='B0 (T)')
 
 # %% read B1
 path = 'sim_inputs/'
-filename = 'B1_ROI_240mm_240mm_240mm'
+filename = 'B1_51'
 FOV = 0.24
 scale = 1
-x_shfit = 60
-
-# Create a 3D grid for the magnetic field data
-x_b1_raw = np.linspace(-120, +120, 31) + x_shfit
-y_b1_raw = np.linspace(-120, +120, 31)
-z_b1_raw = np.linspace(-120, +120, 31)
+x_shfit = 0
 
 B1_data = mr_io.load_single_mat(name=filename, path=path)['B1']
 B1_intrp = np.zeros((3, intrp_x, intrp_y, intrp_z))
+
+# Create a 3D grid for the magnetic field data
+x_b1_raw = np.linspace(-120, +120, B1_data.shape[1]) + x_shfit
+y_b1_raw = np.linspace(-120, +120, B1_data.shape[2])
+z_b1_raw = np.linspace(-120, +120, B1_data.shape[3])
 
 for i in [0, 1, 2]:
     # Calculate the magnitude of the magnetic field and apply a scaling factor
@@ -134,10 +146,11 @@ for i in [0, 1, 2]:
 # %% plot B1
 B1_intrp_amp = np.linalg.norm(B1_intrp, axis=0)
 B1_mask = (B1_intrp_amp > 0.002)
+# B1_mask = mk.gen_breast_mask(b0_X, b0_Y, b0_Z, R=0.06, height=0.100)
 
-vis.scatter3d(b0_X, b0_Y, b0_Z, B1_intrp_amp, title='B1 (T)')
-vis.scatter3d(b0_X, b0_Y, b0_Z, B1_intrp_amp, mask=id & B1_mask, title='B1 (T)')
-vis.scatter3d(b0_X, b0_Y, b0_Z, B1_intrp_amp, mask=B1_mask, title='B1 (T)')
+vis.scatter3d(b0_X, b0_Y, b0_Z, B1_intrp_amp, xlim=xlim, ylim=ylim, zlim=zlim, title='B1 (T)')
+vis.scatter3d(b0_X, b0_Y, b0_Z, B1_intrp_amp, xlim=xlim, ylim=ylim, zlim=zlim, mask=slice & B1_mask, title='B1 (T)')
+vis.scatter3d(b0_X, b0_Y, b0_Z, B1_intrp_amp, xlim=xlim, ylim=ylim, zlim=zlim, mask=SI_cut, title='B1 (T)')
 
 # %% effective B1
 B1_eff = np.zeros((3, intrp_x, intrp_y, intrp_z))
@@ -146,16 +159,28 @@ for i in range(intrp_x):
         for k in range(intrp_z):
             B1_eff[:, i, j, k] = acq.B1_effective(B1_intrp[:, i, j, k], B0_intrp[:, i, j, k])
 B1_eff_amp = np.linalg.norm(B1_eff, axis=0)
-vis.scatter3d(b0_X, b0_Y, b0_Z, B1_eff_amp)
-vis.scatter3d(b0_X, b0_Y, b0_Z, B1_eff_amp, mask=id & B1_mask)
-vis.scatter3d(b0_X, b0_Y, b0_Z, B1_eff_amp, mask=B1_mask)
+# vis.scatter3d(b0_X, b0_Y, b0_Z, B1_eff_amp)
+# vis.scatter3d(b0_X, b0_Y, b0_Z, B1_eff_amp, mask=slice & B1_mask)
+# vis.scatter3d(b0_X, b0_Y, b0_Z, B1_eff_amp, mask=B1_mask)
 ratio_perc = B1_eff_amp / B1_intrp_amp * 100
-vis.scatter3d(b0_X, b0_Y, b0_Z, ratio_perc, title='Effective B1 / B1 (%)')
-vis.scatter3d(b0_X, b0_Y, b0_Z, ratio_perc, mask=id & B1_mask, title='Effective B1 / B1 (%)')
-vis.scatter3d(b0_X, b0_Y, b0_Z, ratio_perc, mask=B1_mask, title='Effective B1 / B1 (%)')
+# vis.scatter3d(b0_X, b0_Y, b0_Z, ratio_perc, xlim=xlim, ylim=ylim, zlim=zlim, title='Effective B1 / B1 (%)')
+# vis.scatter3d(b0_X, b0_Y, b0_Z, ratio_perc, xlim=xlim, ylim=ylim, zlim=zlim, mask=slice & B1_mask,
+#               title='Effective B1 / B1 (%)')
+# vis.scatter3d(b0_X, b0_Y, b0_Z, ratio_perc, xlim=xlim, ylim=ylim, zlim=zlim, mask=B1_mask,
+#               title='Effective B1 / B1 (%)')
+vis.scatter3d(b0_X, b0_Y, b0_Z, ratio_perc, xlim=xlim, ylim=ylim, zlim=zlim, mask=SI_cut,
+              title='Effective B1 / B1 (%)')
+vis.scatter3d(b0_X, b0_Y, b0_Z, ratio_perc, xlim=xlim, ylim=ylim, zlim=zlim, mask=LR_cut,
+              title='Effective B1 / B1 (%)')
 
 # %% flip angle
-flip_angle_deg = B1_eff_amp / np.max(B1_eff_amp[id & B1_mask]) * 90
-vis.scatter3d(b0_X, b0_Y, b0_Z, flip_angle_deg, title='Flip Angle (degree)')
-vis.scatter3d(b0_X, b0_Y, b0_Z, flip_angle_deg, mask=id & B1_mask, title='Flip Angle (degree)')
-vis.scatter3d(b0_X, b0_Y, b0_Z, flip_angle_deg, mask=B1_mask, title='Flip Angle (degree)')
+flip_angle_deg = B1_eff_amp / np.mean(B1_eff_amp[slice & B1_mask]) * 90
+vis.scatter3d(b0_X, b0_Y, b0_Z, flip_angle_deg, xlim=xlim, ylim=ylim, zlim=zlim, title='Flip Angle (degree)')
+vis.scatter3d(b0_X, b0_Y, b0_Z, flip_angle_deg, xlim=xlim, ylim=ylim, zlim=zlim, mask=slice & B1_mask,
+              title='Flip Angle (degree)')
+vis.scatter3d(b0_X, b0_Y, b0_Z, flip_angle_deg, xlim=xlim, ylim=ylim, zlim=zlim, mask=SI_cut,
+              title='Flip Angle (degree)')
+vis.scatter3d(b0_X, b0_Y, b0_Z, flip_angle_deg, xlim=xlim, ylim=ylim, zlim=zlim, mask=LR_cut,
+              title='Flip Angle (degree)')
+vis.scatter3d(b0_X, b0_Y, b0_Z, flip_angle_deg, xlim=xlim, ylim=ylim, zlim=zlim, mask=B1_mask,
+              title='Flip Angle (degree)')
