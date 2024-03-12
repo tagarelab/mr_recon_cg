@@ -27,6 +27,7 @@ def scatter3d(B0_LR, B0_SI, B0_AP, grad, xlim=None, ylim=None, zlim=None, clim=N
     """
 
     fig = plt.figure()
+
     ax = fig.add_subplot(111, projection='3d')
     X_M, Y_M, Z_M = np.meshgrid(B0_LR, B0_SI, B0_AP, indexing='ij')
 
@@ -37,6 +38,7 @@ def scatter3d(B0_LR, B0_SI, B0_AP, grad, xlim=None, ylim=None, zlim=None, clim=N
         grad = grad[mask]
 
     scatter = ax.scatter(X_M, Y_M, Z_M, c=grad, s=1)
+
     plt.colorbar(scatter)
 
     # ax.set_title("Liver Gradient at "+grad_str+" mT/m")
@@ -58,6 +60,6 @@ def scatter3d(B0_LR, B0_SI, B0_AP, grad, xlim=None, ylim=None, zlim=None, clim=N
         ax.set_zlim(zlim)
 
     if clim is not None:
-        plt.clim(clim)
+        scatter.set_clim(clim[0], clim[1])
 
     plt.show()

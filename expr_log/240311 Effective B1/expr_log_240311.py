@@ -174,13 +174,13 @@ vis.scatter3d(b0_X, b0_Y, b0_Z, ratio_perc, xlim=xlim, ylim=ylim, zlim=zlim, mas
               title='Effective B1 / B1 (%)')
 
 # %% flip angle
+clim = [40, 130]
 flip_angle_deg = B1_eff_amp / np.mean(B1_eff_amp[slice & B1_mask]) * 90
-vis.scatter3d(b0_X, b0_Y, b0_Z, flip_angle_deg, xlim=xlim, ylim=ylim, zlim=zlim, title='Flip Angle (degree)')
-vis.scatter3d(b0_X, b0_Y, b0_Z, flip_angle_deg, xlim=xlim, ylim=ylim, zlim=zlim, mask=slice & B1_mask,
+vis.scatter3d(b0_X, b0_Y, b0_Z, flip_angle_deg, xlim=xlim, ylim=ylim, zlim=zlim, clim=clim, mask=slice & B1_mask,
               title='Flip Angle (degree)')
-vis.scatter3d(b0_X, b0_Y, b0_Z, flip_angle_deg, xlim=xlim, ylim=ylim, zlim=zlim, mask=SI_cut,
+vis.scatter3d(b0_X, b0_Y, b0_Z, flip_angle_deg, xlim=xlim, ylim=ylim, zlim=zlim, clim=clim, mask=SI_cut,
               title='Flip Angle (degree)')
-vis.scatter3d(b0_X, b0_Y, b0_Z, flip_angle_deg, xlim=xlim, ylim=ylim, zlim=zlim, mask=LR_cut,
+vis.scatter3d(b0_X, b0_Y, b0_Z, flip_angle_deg, xlim=xlim, ylim=ylim, zlim=zlim, clim=clim, mask=LR_cut,
               title='Flip Angle (degree)')
-vis.scatter3d(b0_X, b0_Y, b0_Z, flip_angle_deg, xlim=xlim, ylim=ylim, zlim=zlim, mask=B1_mask,
+vis.scatter3d(b0_X, b0_Y, b0_Z, flip_angle_deg, xlim=xlim, ylim=ylim, zlim=zlim, clim=clim, mask=B1_mask,
               title='Flip Angle (degree)')
