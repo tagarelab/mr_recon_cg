@@ -10,24 +10,62 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+def apply_mask(data, mask):
+    """
+    Apply a 3D mask to a 4D data array and output a 2D array.
+
+    :param data: 4D data array
+    :param mask: 3D boolean mask
+    :return: 2D array with masked data
+    """
+    # Check if the last three dimensions of data match the dimensions of mask
+    assert data.shape[-3:] == mask.shape, "The last three dimensions of data must match the dimensions of mask"
+
+    # Initialize an empty list to store the masked data
+    masked_data = []
+
+    # Iterate over the first dimension of data
+    for i in range(data.shape[0]):
+        # Apply the mask to the 3D data at the current index
+        masked_3d_data = data[i][mask]
+        # Append the flattened masked data to the list
+        masked_data.append(masked_3d_data.flatten())
+
+    # Convert the list to a 2D numpy array
+    masked_data = np.array(masked_data)
+
+    return masked_data
+
+
 def mask2matrix(data, mask, x, y, z):
     """
     Convert masked data to a 3D matrix.
-    :param data: masked data, 1D array
+    :param data: masked data, 2D array
     :param mask: mask, 3D boolean array
     :param x: x-axis
     :param y: y-axis
     :param z: z-axis
     :return: data in 3D matrix
     """
-    data_matrix = np.zeros((len(x), len(y), len(z)), dtype=complex)
+    unit_dim = 1
+    if len(data.shape) == 1:
+        data = np.expand_dims(data, axis=-1)
+    elif len(data.shape) == 2:
+        unit_dim = data.shape[1]
+
+    data_matrix = np.zeros((len(x), len(y), len(z), unit_dim), dtype=complex)
     counter = 0
     for i in range(len(x)):
         for j in range(len(y)):
             for k in range(len(z)):
                 if mask[i, j, k]:
-                    data_matrix[i, j, k] = data[counter]
+                    for d in range(unit_dim):
+                        data_matrix[i, j, k, d] = data[counter, d]
                     counter += 1
+
+    if unit_dim == 1:
+        data_matrix = np.squeeze(data_matrix, axis=3)
+
     return data_matrix
 
 
