@@ -27,7 +27,7 @@ def B1_effective(B1, B0):
     return B1 - np.dot(B0, B1) / np.linalg.norm(B0) ** 2 * B0
 
 
-def slice_select(b0, ctr_mag, slc_tkns):
+def slice_select(b0_mag, ctr_mag, slc_tkns):
     """
     Slice selection function
     This function is adapted from a MATLAB function by Github Copilot and edited & tested by the author.
@@ -41,11 +41,9 @@ def slice_select(b0, ctr_mag, slc_tkns):
     - numpy.ndarray: The slice selection mask.
     """
 
-    b0 = np.linalg.norm(b0, axis=0)  # input b0 is 4D, but we only need the magnitude
-
     val_1 = ctr_mag - slc_tkns / 2
     val_2 = ctr_mag + slc_tkns / 2
 
-    id = (b0 > val_1) & (b0 < val_2)
+    id = (b0_mag > val_1) & (b0_mag < val_2)
 
     return id
