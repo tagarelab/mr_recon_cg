@@ -78,7 +78,7 @@ B0_Z_coord = B0_data.iloc[:, 2].values * 2  # mm
 # Y_data = B0_data.iloc[:, 4].values
 # Z_data = B0_data.iloc[:, 5].values
 
-B0_intrp = np.zeros((3, intrp_x, intrp_y, intrp_z))
+B0_intrp = np.zeros((intrp_x, intrp_y, intrp_z, 3))
 b0_X_intrp = np.zeros((intrp_x, intrp_y, intrp_z))
 b0_Y_intrp = np.zeros((intrp_x, intrp_y, intrp_z))
 b0_Z_intrp = np.zeros((intrp_x, intrp_y, intrp_z))
@@ -90,11 +90,11 @@ for i in range(3):
     nubo_b0_mesh, x_M, y_M, z_M = algb.vec2mesh(nubo_b0, B0_X_coord, B0_Y_coord, B0_Z_coord, 11, 11, 11)
     # vis.scatter3d(x_M, y_M, z_M, nubo_b0_mesh)
     nubo_b0_mesh = nubo_b0_mesh.T
-    B0_intrp[i, :, :, :] = algb.interp_by_pts(nubo_b0_mesh, x_M, y_M, z_M, intrp_pts, method='linear')
+    B0_intrp[:, :, :, i] = algb.interp_by_pts(nubo_b0_mesh, x_M, y_M, z_M, intrp_pts, method='linear')
 
 nubo_b0_raw = B0_intrp
 # nubo_b0_raw, b0_X, b0_Y, b0_Z = mr_io.read_nubo_b0(path=path, intrp_x=intrp_x, intrp_y=intrp_y, intrp_z=intrp_z)
-nubo_b0_amp = np.linalg.norm(nubo_b0_raw, axis=0)
+nubo_b0_amp = np.linalg.norm(nubo_b0_raw, axis=3)
 vis.scatter3d(b0_X, b0_Y, b0_Z, nubo_b0_amp, xlim=xlim, ylim=ylim, zlim=zlim, title='B0 (T)')
 
 # %% slice selection
@@ -110,7 +110,7 @@ slc_tkns_mag = slc_tkns_frq / gamma  # T
 nubo_b0 = nubo_b0_raw * DC  # slice strength
 
 # Slice Selection
-slice = acq.slice_select(nubo_b0, ctr_mag, slc_tkns_mag)
+slice = acq.slice_select(nubo_b0_amp, ctr_mag, slc_tkns_mag)
 
 # Cut in SI direction
 X_M, Y_M, Z_M = np.meshgrid(b0_X, b0_Y, b0_Z, indexing='ij')
@@ -129,7 +129,7 @@ scale = 1
 x_shfit = 0
 
 B1_data = mr_io.load_single_mat(name=filename, path=path)['B1']
-B1_intrp = np.zeros((3, intrp_x, intrp_y, intrp_z))
+B1_intrp = np.zeros((intrp_x, intrp_y, intrp_z, 3))
 
 # Create a 3D grid for the magnetic field data
 x_b1_raw = np.linspace(-120, +120, B1_data.shape[1]) + x_shfit
@@ -138,12 +138,12 @@ z_b1_raw = np.linspace(-120, +120, B1_data.shape[3])
 
 for i in [0, 1, 2]:
     # Calculate the magnitude of the magnetic field and apply a scaling factor
-    nubo_b1 = B1_data[i, :, :, :]
+    nubo_b1 = B1_data[:, :, :, i]
     nubo_b1 = scale * nubo_b1
 
-    B1_intrp[i, :, :, :] = algb.interp_by_pts(nubo_b1, x_b1_raw, y_b1_raw, z_b1_raw, intrp_pts, method='linear')
+    B1_intrp[:, :, :, i] = algb.interp_by_pts(nubo_b1, x_b1_raw, y_b1_raw, z_b1_raw, intrp_pts, method='linear')
 
-B1_intrp_amp = np.linalg.norm(B1_intrp, axis=0)
+B1_intrp_amp = np.linalg.norm(B1_intrp, axis=3)
 B1_mask = (B1_intrp_amp > 0.002)
 # B1_mask = mk.gen_breast_mask(b0_X, b0_Y, b0_Z, R=0.06, height=0.100)
 
