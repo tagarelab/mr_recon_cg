@@ -10,7 +10,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 
 
-def scatter3d(B0_LR, B0_SI, B0_AP, grad, xlim=None, ylim=None, zlim=None, mask=None, title=None):
+def scatter3d(B0_LR, B0_SI, B0_AP, grad, xlim=None, ylim=None, zlim=None, clim=None, mask=None, title=None):
     """
     3D scatter plot
     This function is adapted from a MATLAB function by Github Copilot and edited & tested by the author.
@@ -56,5 +56,8 @@ def scatter3d(B0_LR, B0_SI, B0_AP, grad, xlim=None, ylim=None, zlim=None, mask=N
 
     if zlim is not None:
         ax.set_zlim(zlim)
+
+    if clim is not None:
+        plt.clim(clim)
 
     plt.show()
