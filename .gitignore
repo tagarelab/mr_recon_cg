@@ -6,6 +6,8 @@ data/
 .ipynb_checkpoints/
 .idea
 __pycache__/
+optlib/__pycache__/
+.ipynb
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/pycharm
