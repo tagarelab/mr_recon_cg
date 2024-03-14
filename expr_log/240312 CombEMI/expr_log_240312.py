@@ -71,9 +71,9 @@ amp_max = 35  # linear, not dB
 amp_min = 30
 
 # Comb params
-lambda_val = 320  # regularization term
+lambda_val = 15000  # regularization term
 step = 0.1  # step size
-max_iter = 30  # number of iterations
+max_iter = 10000  # number of iterations
 pre_drop = 0  # drop this many points at the front of each echo
 post_drop = 0  # drop this many points at the end of each echo
 pk_win = 0.33  # the window size for above-white-noise peak, should be within (0,1)
@@ -135,13 +135,14 @@ for k in range(N_rep):
     signal_pro = signal - probe
 
     # calculate difference
-    signal_comb = signal - cancelled_comb
+    # signal_comb = signal - cancelled_comb
 
     # Generate imag
     sig_org = np.reshape(signal, (-1, N_echoes))
-    sig_comb = np.reshape(signal_comb, (-1, N_echoes))
+    # sig_comb = np.reshape(signal_comb, (-1, N_echoes))
     sig_pro = np.reshape(signal_pro, (-1, N_echoes))
-    noi_comb = np.reshape(cancelled_comb, (-1, N_echoes))
+    noi_comb = np.reshape(cancelled_comb, (-1, N_echoes)).T
+    sig_comb = sig_org - noi_comb
 
     sig_org_img = cs.freq2im(sig_org)
     sig_comb_img = cs.freq2im(sig_comb)

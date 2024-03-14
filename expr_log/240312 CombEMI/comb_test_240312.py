@@ -212,7 +212,7 @@ def admm_l2_l1(A, b, x0, l1_wt=1.0, rho=1.0, iter_max=100, eps=1e-2):
 
     # Iterate till termination
     while ((steps < iter_max) & ((norm(rk_1) > eps) | (norm(sk_1) > eps))):
-        xk_1, cg_flag = cg.solve_lin_cg(b, A, xk, B=B, c=rho * (zk - uk), max_iter=2, inner_max_iter=6)
+        xk_1, cg_flag = cg.solve_lin_cg(b, A, xk, B=B, c=rho * (zk - uk), max_iter=20, inner_max_iter=6)
         zk_1 = s_thresh(xk_1 + uk, l1_wt / rho)
         uk_1 = uk + xk_1 - zk_1
         rk_1 = xk_1 - zk_1
@@ -326,7 +326,7 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pr
     emi_prdct = sn_recognition(signal=zfilled_data, mask=input_mask, lambda_val=lambda_val, stepsize=step, tol=tol,
                                max_iter=max_iter,
                                method="conj_grad_l1_reg")
-    emi_prdct = np.squeeze(emi_prdct)
+    # emi_prdct = np.squeeze(emi_prdct)
     # factor = np.linalg.norm(noi_data, 1) / np.linalg.norm(emi_prdct[noi_all], 1)
     # emi_prdct *= factor
     # emi_prdct = np.abs(emi_prdct) * np.exp(-1j * np.angle(emi_prdct))
@@ -341,7 +341,7 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pr
     plt.legend()
     plt.show()
 
-    return acq_corr
+    return emi_prdct[samp_all]
 
 
 # %% md
@@ -384,19 +384,23 @@ def sn_recognition(signal, mask, lambda_val=6, tol=0.1, stepsize=1, max_iter=100
         S = selection_op(signal.shape, mask_id)
         F = ifft_op()
         A = op.composite_op(S, F)
-        sn_prdct = admm_l2_l1(A=mask_matrix, b=y, x0=np.zeros_like(y), l1_wt=lambda_val, rho=1.0, iter_max=max_iter,
-                              eps=tol)
+        sn_prdct, cg_flag = admm_l2_l1(A=A, b=signal[mask], x0=np.zeros_like(y), l1_wt=lambda_val, rho=1.0,
+                                       iter_max=max_iter,
+                                       eps=tol)
         # sn_prdct = cg_comb(lambda_val=lambda_val, mask=mask, y=y, max_iter=max_iter, stepsize=stepsize, tol=tol).run()
-        plt.figure()
-        plt.plot(np.abs(sn_prdct))
-        plt.title("EMI prediction in frequency domain")
-        plt.show()
+        if not cg_flag:
+            print("Step limit reached.")
 
-        sn_prdct = freq2im(sn_prdct)
-        plt.figure()
-        plt.plot(np.abs(sn_prdct))
-        plt.title("EMI prediction in time domain")
-        plt.show()
+        # plt.figure()
+        # plt.plot(np.abs(sn_prdct))
+        # plt.title("EMI prediction in frequency domain")
+        # plt.show()
+        #
+        sn_prdct = F.forward(sn_prdct)
+        # plt.figure()
+        # plt.plot(np.abs(sn_prdct))
+        # plt.title("EMI prediction in time domain")
+        # plt.show()
     else:
         print("Invalid optimization method.")
 
