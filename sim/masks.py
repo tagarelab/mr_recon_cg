@@ -69,7 +69,7 @@ def mask2matrix(data, mask, x, y, z):
     return data_matrix
 
 
-def gen_breast_mask(x, y, z, R=0.06, height=0.100):
+def gen_breast_mask(x, y, z, loc=[0, 0, 0], R=0.06, height=0.100):
     """
     Generate a breast mask. The breast is modeled as a half ellipsoid.
     This function is adapted from code from Yonghyun and edited & tested by the author.
@@ -90,3 +90,21 @@ def gen_breast_mask(x, y, z, R=0.06, height=0.100):
                         mask[i, j, k] = True
 
     return mask
+
+
+def gen_sphere(X_axis, Y_axis, Z_axis, loc, rad):
+    """
+    Create a sphere phantom/mask.
+
+    Parameters:
+    - loc (numpy.ndarray): The location of the sphere.
+    - rad (float): The radius of the sphere.
+    - dim (tuple): The dimensions of the phantom.
+
+    Returns:
+    - numpy.ndarray: The sphere phantom.
+    """
+
+    X, Y, Z = np.meshgrid(X_axis, Y_axis, Z_axis)
+
+    return (X - loc[0]) ** 2 + (Y - loc[1]) ** 2 + (Z - loc[2]) ** 2 < rad ** 2

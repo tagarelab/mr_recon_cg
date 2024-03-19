@@ -8,7 +8,7 @@
 
 import numpy as np
 
-__all__ = ['slice_select']
+__all__ = ['slice_select', 'B1_effective']
 
 
 def B1_effective(B1, B0):

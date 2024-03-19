@@ -9,11 +9,56 @@
 import unittest
 import numpy as np
 from sim import masks as mk
+import visualization as vis
 
 
 class TestMasks(unittest.TestCase):
 
-    def test_maskmask2matrix(self):
+    def test_gen_sphere(self):
+        """
+        Test the sphere_phantom function
+        This function is drafted by Github Copilot and edited & tested by the author.
+        :return:
+        """
+        # Create a 3D phantom
+        X_axis = np.linspace(-10, 10, 100)
+        Y_axis = np.linspace(-10, 10, 100)
+        Z_axis = np.linspace(-10, 10, 100)
+        loc = np.array([0, 0, -10])
+        rad = 3
+        phantom_3d = mk.gen_sphere(X_axis, Y_axis, Z_axis, loc, rad)
+
+        # Check if the output dimensions are correct
+        assert phantom_3d.shape == (100, 100, 100)
+
+        vis.scatter3d(X_axis, Y_axis, Z_axis, phantom_3d, title='Sphere Phantom', mask=phantom_3d > 0)
+
+        # Check if the phantom is correct
+        # assert np.sum(phantom_3d) == 523598
+
+    def test_gen_breast_mask(self):
+        """
+        Test the gen_breast_mask function
+        This function is drafted by Github Copilot and edited & tested by the author.
+        :return:
+        """
+        # Create a 3D phantom
+        X_axis = np.linspace(-10, 10, 100)
+        Y_axis = np.linspace(-10, 10, 100)
+        Z_axis = np.linspace(-10, 10, 100)
+        loc = [0, 0, 0]
+        phantom_3d = mk.gen_breast_mask(X_axis, Y_axis, Z_axis, loc=loc)
+
+        # Check if the output dimensions are correct
+        assert phantom_3d.shape == (100, 100, 100)
+
+        # visualization
+        vis.scatter3d(X_axis, Y_axis, Z_axis, phantom_3d, title='Breast Phantom', mask=phantom_3d > 0)
+
+        # Check if the phantom is correct
+        # assert np.sum(phantom_3d) == 523598
+
+    def test_mask2matrix(self):
         """
         Test the mask2matrix function
         This function is drafted by Github Copilot and edited & tested by the author.
