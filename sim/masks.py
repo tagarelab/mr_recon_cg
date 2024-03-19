@@ -37,7 +37,7 @@ def apply_mask(data, mask):
     return masked_data
 
 
-def mask2matrix(data, mask, x, y, z):
+def mask2matrix(data, mask, x, y, z, dtype=complex):
     """
     Convert masked data to a 3D matrix.
     :param data: masked data, 2D array
@@ -49,19 +49,19 @@ def mask2matrix(data, mask, x, y, z):
     """
     unit_dim = 1
     if len(data.shape) == 1:
-        data = np.expand_dims(data, axis=-1)
+        data = np.expand_dims(data, axis=0)
     elif len(data.shape) == 2:
-        unit_dim = data.shape[1]
+        unit_dim = data.shape[0]
 
-    data_matrix = np.zeros((len(x), len(y), len(z), unit_dim), dtype=complex)
-    counter = 0
-    for i in range(len(x)):
-        for j in range(len(y)):
-            for k in range(len(z)):
-                if mask[i, j, k]:
-                    for d in range(unit_dim):
-                        data_matrix[i, j, k, d] = data[counter, d]
-                    counter += 1
+    data_matrix = np.zeros((unit_dim, len(x), len(y), len(z)), dtype=dtype)
+    for d in range(unit_dim):
+        counter = 0
+        for i in range(len(x)):
+            for j in range(len(y)):
+                for k in range(len(z)):
+                    if mask[i, j, k]:
+                        data_matrix[d, i, j, k] = data[d, counter]
+                        counter += 1
 
     if unit_dim == 1:
         data_matrix = np.squeeze(data_matrix, axis=3)
