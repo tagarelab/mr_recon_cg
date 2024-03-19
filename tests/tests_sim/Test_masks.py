@@ -43,17 +43,19 @@ class TestMasks(unittest.TestCase):
         :return:
         """
         # Create a 3D phantom
-        X_axis = np.linspace(-10, 10, 100)
-        Y_axis = np.linspace(-10, 10, 100)
-        Z_axis = np.linspace(-10, 10, 100)
-        loc = [0, 0, 0]
-        phantom_3d = mk.gen_breast_mask(X_axis, Y_axis, Z_axis, loc=loc)
+        X_axis = np.linspace(0, 20, 100)
+        Y_axis = np.linspace(0, 20, 100)
+        Z_axis = np.linspace(0, 20, 100)
+        loc = [6, 6, 6]
+        phantom_3d = mk.gen_breast_mask(X_axis, Y_axis, Z_axis, loc=loc, R=6, height=10)
+        R = 6
+        height = 10
 
         # Check if the output dimensions are correct
         assert phantom_3d.shape == (100, 100, 100)
 
         # visualization
-        vis.scatter3d(X_axis, Y_axis, Z_axis, phantom_3d, title='Breast Phantom', mask=phantom_3d > 0)
+        vis.scatter3d(X_axis, Y_axis, Z_axis, phantom_3d, title='Breast Mask', mask=abs(phantom_3d) > 0)
 
         # Check if the phantom is correct
         # assert np.sum(phantom_3d) == 523598
