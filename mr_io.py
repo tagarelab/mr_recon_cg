@@ -19,44 +19,32 @@ __all__ = ['save_dict', 'save_single_mat', 'load_single_mat', 'load_list_mat']
 
 
 
-def read_nubo_b0(path, intrp_x, intrp_y, intrp_z, FOV=0.4, scale=2.104):
-    # TODO: generalize this function
-    # Read the data
+def read_nubo_b0(path, intrp_pts, scale_b0=2.104):
     B0_data = pd.read_csv(path, header=None)
-
     # Extract coordinates and magnetic field components
-    B0_X_coord = B0_data.iloc[:, 0].values
-    B0_Y_coord = B0_data.iloc[:, 1].values
-    B0_Z_coord = B0_data.iloc[:, 2].values
-    # X_data = B0_data.iloc[:, 3].values
-    # Y_data = B0_data.iloc[:, 4].values
-    # Z_data = B0_data.iloc[:, 5].values
+    X_axis_coord = B0_data.iloc[:, 0].values * 2  # mm
+    Y_axis_coord = B0_data.iloc[:, 1].values * 2  # mm
+    Z_axis_coord = B0_data.iloc[:, 2].values * 2  # mm
 
-    # Create a 3D grid for the magnetic field data
-    x_M = np.linspace(B0_X_coord.min(), B0_X_coord.max(), 11)
-    y_M = np.linspace(B0_Y_coord.min(), B0_Y_coord.max(), 11)
-    z_M = np.linspace(B0_Z_coord.min(), B0_Z_coord.max(), 11)
+    nubo_b0 = B0_data.iloc[:, 3].values
+    nubo_b0 = scale_b0 * nubo_b0
+    nubo_b0_mesh, x_M, y_M, z_M = algb.vec2mesh(nubo_b0, X_axis_coord, Y_axis_coord, Z_axis_coord, 11, 11, 11)
+    nubo_b0_mesh = nubo_b0_mesh.T
+    B0_x = algb.interp_by_pts(nubo_b0_mesh, x_M, y_M, z_M, intrp_pts, method='linear')
 
-    B0_intrp = np.zeros((3, intrp_x, intrp_y, intrp_z))
-    b0_X_intrp = np.zeros((intrp_x, intrp_y, intrp_z))
-    b0_Y_intrp = np.zeros((intrp_x, intrp_y, intrp_z))
-    b0_Z_intrp = np.zeros((intrp_x, intrp_y, intrp_z))
+    nubo_b0 = B0_data.iloc[:, 4].values
+    nubo_b0 = scale_b0 * nubo_b0
+    nubo_b0_mesh, x_M, y_M, z_M = algb.vec2mesh(nubo_b0, X_axis_coord, Y_axis_coord, Z_axis_coord, 11, 11, 11)
+    nubo_b0_mesh = nubo_b0_mesh.T
+    B0_y = algb.interp_by_pts(nubo_b0_mesh, x_M, y_M, z_M, intrp_pts, method='linear')
 
-    for i in range(3):
-        nubo_b0 = B0_data.iloc[:, 3 + i].values
-        nubo_b0 = scale * nubo_b0
-        nubo_b0_mesh, _, _, _ = algebra.vec2mesh(nubo_b0, B0_X_coord, B0_Y_coord, B0_Z_coord, 11, 11, 11)
-        vis.scatter3d(x_M, y_M, z_M, nubo_b0_mesh)
-        nubo_B0_intrp, b0_X_intrp, b0_Y_intrp, b0_Z_intrp = algb.interp_3dmat(nubo_b0_mesh, x_M, y_M, z_M, intrp_x,
-                                                                              intrp_y, intrp_z)
+    nubo_b0 = B0_data.iloc[:, 5].values
+    nubo_b0 = scale_b0 * nubo_b0
+    nubo_b0_mesh, x_M, y_M, z_M = algb.vec2mesh(nubo_b0, X_axis_coord, Y_axis_coord, Z_axis_coord, 11, 11, 11)
+    nubo_b0_mesh = nubo_b0_mesh.T
+    B0_z = algb.interp_by_pts(nubo_b0_mesh, x_M, y_M, z_M, intrp_pts, method='linear')
 
-        b0_X_intrp = b0_X_intrp / 200 * FOV
-        b0_Y_intrp = b0_Y_intrp / 200 * FOV
-        b0_Z_intrp = b0_Z_intrp / 200 * FOV
-
-        B0_intrp[i, :, :, :] = nubo_B0_intrp
-
-    return B0_intrp, b0_X_intrp, b0_Y_intrp, b0_Z_intrp
+    return np.array([B0_x, B0_y, B0_z])
 
 
 def read_b0(path, intrp_x, intrp_y, intrp_z, scale, FOV):
