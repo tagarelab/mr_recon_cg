@@ -80,16 +80,17 @@ def gen_breast_mask(x, y, z, loc=[0, 0, 0], R=6, height=10, tkns=0.5, chest_dim=
     :param height:
     :return:
     """
+    loc[2] = loc[2] + height
     mask = np.zeros((len(x), len(y), len(z)), dtype=bool)
     # for k in np.arange(np.floor(len(z)/2),len(z), dtype = int):
     for i in range(len(x)):
         for j in range(len(y)):
             for k in range(len(z)):
-                if z[k] > loc[2]:
+                if z[k] < loc[2]:
                     r = np.sqrt(R ** 2 * (1 - ((z[k] - loc[2]) / height) ** 2)) - tkns
                     if (y[j] - loc[1]) ** 2 + (x[i] - loc[0]) ** 2 < r ** 2:
                         mask[i, j, k] = True
-                elif loc[2] - z[k] < chest_dim[2]:
+                elif z[k] - loc[2] < chest_dim[2]:
                     if abs(x[i] - loc[0]) < chest_dim[0] / 2 and abs(y[j] - loc[1]) < chest_dim[1] / 2:
                         mask[i, j, k] = True
     return mask

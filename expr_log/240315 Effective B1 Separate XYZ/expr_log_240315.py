@@ -31,16 +31,8 @@ X_axis = np.linspace(xlim[0], xlim[1], intrp_x)
 Y_axis = np.linspace(ylim[0], ylim[1], intrp_y)
 Z_axis = np.linspace(zlim[0], zlim[1], intrp_z)
 
-# Breast Mask
-R = 6
-height = 10
-loc = [0, 0, Z_axis[0]]
-chest_dim = [12, 12, 3]
-breast_mask = mk.gen_breast_mask(X_axis, Y_axis, Z_axis, R=R, height=height, loc=loc, tkns=0.5, chest_dim=chest_dim)
-
 # Read the data
 B0_data = pd.read_csv(path, header=None)
-
 FOV = 0.4
 scale_b0 = 2.104
 
@@ -50,34 +42,48 @@ Y_axis_coord = B0_data.iloc[:, 1].values * 2  # mm
 Z_axis_coord = B0_data.iloc[:, 2].values * 2  # mm
 
 B0_intrp = np.zeros((intrp_x, intrp_y, intrp_z, 3))
-X_axis_intrp = np.zeros((intrp_x, intrp_y, intrp_z))
-Y_axis_intrp = np.zeros((intrp_x, intrp_y, intrp_z))
-Z_axis_intrp = np.zeros((intrp_x, intrp_y, intrp_z))
+B0_x = np.zeros((intrp_x, intrp_y, intrp_z))
+B0_y = np.zeros((intrp_x, intrp_y, intrp_z))
+B0_z = np.zeros((intrp_x, intrp_y, intrp_z))
 intrp_pts = algb.gen_interp_pts(X_axis, Y_axis, Z_axis)
 
-for i in range(3):
-    nubo_b0 = B0_data.iloc[:, 3 + i].values
-    nubo_b0 = scale_b0 * nubo_b0
-    nubo_b0_mesh, x_M, y_M, z_M = algb.vec2mesh(nubo_b0, X_axis_coord, Y_axis_coord, Z_axis_coord, 11, 11, 11)
-    # vis.scatter3d(x_M, y_M, z_M, nubo_b0_mesh)
-    nubo_b0_mesh = nubo_b0_mesh.T
-    B0_intrp[:, :, :, i] = algb.interp_by_pts(nubo_b0_mesh, x_M, y_M, z_M, intrp_pts, method='linear')
+nubo_b0 = B0_data.iloc[:, 3].values
+nubo_b0 = scale_b0 * nubo_b0
+nubo_b0_mesh, x_M, y_M, z_M = algb.vec2mesh(nubo_b0, X_axis_coord, Y_axis_coord, Z_axis_coord, 11, 11, 11)
+nubo_b0_mesh = nubo_b0_mesh.T
+B0_x = algb.interp_by_pts(nubo_b0_mesh, x_M, y_M, z_M, intrp_pts, method='linear')
 
-nubo_b0_raw = B0_intrp
-# nubo_b0_raw, X_axis, Y_axis, Z_axis = mr_io.read_nubo_b0(path=path, intrp_x=intrp_x, intrp_y=intrp_y, intrp_z=intrp_z)
-nubo_b0_amp = np.linalg.norm(nubo_b0_raw, axis=3)
+nubo_b0 = B0_data.iloc[:, 4].values
+nubo_b0 = scale_b0 * nubo_b0
+nubo_b0_mesh, x_M, y_M, z_M = algb.vec2mesh(nubo_b0, X_axis_coord, Y_axis_coord, Z_axis_coord, 11, 11, 11)
+nubo_b0_mesh = nubo_b0_mesh.T
+B0_y = algb.interp_by_pts(nubo_b0_mesh, x_M, y_M, z_M, intrp_pts, method='linear')
+
+nubo_b0 = B0_data.iloc[:, 5].values
+nubo_b0 = scale_b0 * nubo_b0
+nubo_b0_mesh, x_M, y_M, z_M = algb.vec2mesh(nubo_b0, X_axis_coord, Y_axis_coord, Z_axis_coord, 11, 11, 11)
+nubo_b0_mesh = nubo_b0_mesh.T
+B0_z = algb.interp_by_pts(nubo_b0_mesh, x_M, y_M, z_M, intrp_pts, method='linear')
+
+nubo_b0_amp = np.linalg.norm([B0_x, B0_y, B0_z], axis=0)
 vis.scatter3d(X_axis, Y_axis, Z_axis, nubo_b0_amp, xlim=xlim, ylim=ylim, zlim=zlim, title='B0 (T)')
 
 # %% Generate Mask and Phantom
 # Breast Mask
-R = 6
-height = 10
+R = 60
+height = 100
 loc = [0, 0, Z_axis[0]]
-chest_dim = [12, 12, 3]
-breast_mask = mk.gen_breast_mask(X_axis, Y_axis, Z_axis, R=R, height=height, loc=loc, tkns=0.5, chest_dim=chest_dim)
+chest_dim = [120, 120, 30]
+coil_tkns = 5
+breast_mask = mk.gen_breast_mask(X_axis, Y_axis, Z_axis, R=R, height=height, loc=loc, tkns=coil_tkns,
+                                 chest_dim=chest_dim)
 
 # Sphere phantom
-loc = np.array([0, 0, -10])
+phantom = mk.gen_sphere(X_axis, Y_axis, Z_axis, loc=loc + [0, 0, 2], rad=20)
+vis.scatter3d(X_axis, Y_axis, Z_axis, phantom, title='Sphere Phantom', mask=phantom > 0, xlim=xlim, ylim=ylim,
+              zlim=zlim)
+vis.scatter3d(X_axis, Y_axis, Z_axis, phantom, title='Breast Mask', mask=breast_mask > 0, xlim=xlim, ylim=ylim,
+              zlim=zlim)
 
 # %% slice selection
 # Constants
