@@ -13,15 +13,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import visualization as vis
 import algebra as algb
-import pandas as pd
+from optlib import operators as ops
 from sim import masks as mk
-
 
 # %% read B0
 path = 'sim_inputs/magnetData.csv'
-intrp_x = 51
-intrp_y = 51
-intrp_z = 51
+intrp_x = 101
+intrp_y = 101
+intrp_z = 101
 
 xlim = [-120, 120]
 ylim = [-120, 120]
@@ -74,7 +73,7 @@ vis.scatter3d(X_axis, Y_axis, Z_axis, phantom, title='Breast Mask', mask=breast_
 # Constants
 gamma = 42.58e6  # Hz/T
 read_mag = 0.046  # T
-DC = 0.1  # percent DC when polarizing
+DC = 0.09  # percent DC when polarizing
 ctr_mag = read_mag  # slice selection gradient
 slc_tkns_frq = 10e3 * 2  # Hz
 slc_tkns_mag = slc_tkns_frq / gamma  # T
@@ -97,19 +96,19 @@ vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(B0_polar, axis=0), xlim=xli
               title='B0 (T)')
 
 # %% effective B1
-# B1_eff = np.zeros((3, intrp_x, intrp_y, intrp_z))
-# for i in range(intrp_x):
-#     for j in range(intrp_y):
-#         for k in range(intrp_z):
-#             B1_eff[:, i, j, k] = acq.B1_effective(B1_raw[:, i, j, k], B0_raw[:, i, j, k])
-# ratio_perc = np.linalg.norm(B1_eff, axis=0) / np.linalg.norm(B1_raw, axis=0) * 100
-# vis.scatter3d(X_axis, Y_axis, Z_axis, ratio_perc, xlim=xlim, ylim=ylim, zlim=zlim, mask=breast_mask & SI_cut,
-#               title='Effective B1 / B1 (%)')
-# vis.scatter3d(X_axis, Y_axis, Z_axis, ratio_perc, xlim=xlim, ylim=ylim, zlim=zlim, mask=breast_mask & LR_cut,
-#               title='Effective B1 / B1 (%)')
+B1_eff = np.zeros((3, intrp_x, intrp_y, intrp_z))
+for i in range(intrp_x):
+    for j in range(intrp_y):
+        for k in range(intrp_z):
+            B1_eff[:, i, j, k] = acq.B1_effective(B1_raw[:, i, j, k], B0_raw[:, i, j, k])
+ratio_perc = np.linalg.norm(B1_eff, axis=0) / np.linalg.norm(B1_raw, axis=0) * 100
+vis.scatter3d(X_axis, Y_axis, Z_axis, ratio_perc, xlim=xlim, ylim=ylim, zlim=zlim, mask=breast_mask & SI_cut,
+              title='Effective B1 / B1 (%)')
+vis.scatter3d(X_axis, Y_axis, Z_axis, ratio_perc, xlim=xlim, ylim=ylim, zlim=zlim, mask=breast_mask & LR_cut,
+              title='Effective B1 / B1 (%)')
 
 # %% flip angle
-# clim = [40, 130]
+clim = [40, 130]
 # B1_eff_amp = np.linalg.norm(B1_eff, axis=0)
 # flip_angle_deg = B1_eff_amp / np.mean(B1_eff_amp[slice & breast_mask]) * 90
 # vis.scatter3d(X_axis, Y_axis, Z_axis, flip_angle_deg, xlim=xlim, ylim=ylim, zlim=zlim, clim=clim, mask=breast_mask &slice,
@@ -121,9 +120,14 @@ vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(B0_polar, axis=0), xlim=xli
 
 # %% Select voxels of interest
 VOI = breast_mask & slice
+
+# %% Object
 phantom_VOI = phantom[VOI]
+O = ops.hadamard_op(phantom_VOI)
+
+# %% Polarization
 B0_VOI = B0_raw[:, VOI]
-B1_VOI = B1_raw[:, VOI]
+P = ops.hadamard_op(B0_VOI)
 
 # sanity check
 # B0_VOI_2mat = mk.mask2matrix(B0_VOI, VOI, X_axis, Y_axis, Z_axis)
@@ -132,3 +136,12 @@ B1_VOI = B1_raw[:, VOI]
 # print(np.array_equal(B0_VOI, B0_VOI_2mat[:, VOI]))
 
 # %% Excitation
+t = np.linspace(0, 5, 100)  # ms
+B1_VOI = B1_raw[:, VOI]
+omega_0 = gamma * np.linalg.norm(B0_VOI, axis=0)
+
+# Relaxation
+# flip_angle_deg = B1_eff_amp / np.mean(B1_eff_amp[slice & breast_mask]) * 90
+
+# %%
+t = np.linspace(0, 5, 100)  # ms
