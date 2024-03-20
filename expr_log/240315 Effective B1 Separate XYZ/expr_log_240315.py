@@ -96,19 +96,19 @@ vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(B0_polar, axis=0), xlim=xli
               title='B0 (T)')
 
 # %% effective B1
-B1_eff = np.zeros((3, intrp_x, intrp_y, intrp_z))
-for i in range(intrp_x):
-    for j in range(intrp_y):
-        for k in range(intrp_z):
-            B1_eff[:, i, j, k] = acq.B1_effective(B1_raw[:, i, j, k], B0_raw[:, i, j, k])
-ratio_perc = np.linalg.norm(B1_eff, axis=0) / np.linalg.norm(B1_raw, axis=0) * 100
-vis.scatter3d(X_axis, Y_axis, Z_axis, ratio_perc, xlim=xlim, ylim=ylim, zlim=zlim, mask=breast_mask & SI_cut,
-              title='Effective B1 / B1 (%)')
-vis.scatter3d(X_axis, Y_axis, Z_axis, ratio_perc, xlim=xlim, ylim=ylim, zlim=zlim, mask=breast_mask & LR_cut,
-              title='Effective B1 / B1 (%)')
+# B1_eff = np.zeros((3, intrp_x, intrp_y, intrp_z))
+# for i in range(intrp_x):
+#     for j in range(intrp_y):
+#         for k in range(intrp_z):
+#             B1_eff[:, i, j, k] = acq.B1_effective(B1_raw[:, i, j, k], B0_raw[:, i, j, k])
+# ratio_perc = np.linalg.norm(B1_eff, axis=0) / np.linalg.norm(B1_raw, axis=0) * 100
+# vis.scatter3d(X_axis, Y_axis, Z_axis, ratio_perc, xlim=xlim, ylim=ylim, zlim=zlim, mask=breast_mask & SI_cut,
+#               title='Effective B1 / B1 (%)')
+# vis.scatter3d(X_axis, Y_axis, Z_axis, ratio_perc, xlim=xlim, ylim=ylim, zlim=zlim, mask=breast_mask & LR_cut,
+#               title='Effective B1 / B1 (%)')
 
 # %% flip angle
-clim = [40, 130]
+# clim = [40, 130]
 # B1_eff_amp = np.linalg.norm(B1_eff, axis=0)
 # flip_angle_deg = B1_eff_amp / np.mean(B1_eff_amp[slice & breast_mask]) * 90
 # vis.scatter3d(X_axis, Y_axis, Z_axis, flip_angle_deg, xlim=xlim, ylim=ylim, zlim=zlim, clim=clim, mask=breast_mask &slice,
@@ -136,7 +136,6 @@ P = ops.hadamard_op(B0_VOI)
 # print(np.array_equal(B0_VOI, B0_VOI_2mat[:, VOI]))
 
 # %% Excitation
-t = np.linspace(0, 5, 100)  # ms
 B1_VOI = B1_raw[:, VOI]
 omega_0 = gamma * np.linalg.norm(B0_VOI, axis=0)
 

@@ -13,6 +13,22 @@ import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 
 
+def rot_mat(u, theta):
+    """
+    Generate matrix to perform rotation on a 3D vector.
+    Reference: https://en.wikipedia.org/wiki/Rotation_matrix
+    :param u: the fixed direction, with x,y,z component
+    :param theta: rotate this much
+    :return:
+    """
+    c = np.cos(theta)
+    s = np.sin(theta)
+
+    return np.array([[u[0] ** 2 * (1 - c) + c, u[0] * u[1] * (1 - c) - u[2] * s, u[0] * u[2] * (1 - c) + u[1] * s],
+                     [u[0] * u[1] * (1 - c) + u[2] * s, u[1] ** 2 * (1 - c) + c, u[1] * u[2] * (1 - c) - u[0] * s],
+                     [u[0] * u[2] * (1 - c) - u[1] * s, u[1] * u[2] * (1 - c) - u[0] * s, u[2] ** 2 * (1 - c) + c]])
+
+
 def interp_by_pts(M, x_axis, y_axis, z_axis, intrp_pts, method='linear'):
     interpolator = RegularGridInterpolator((x_axis, y_axis, z_axis), M, method=method)
     # check if the interpolation points are within the range of the raw data
