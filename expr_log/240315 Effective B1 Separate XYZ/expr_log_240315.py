@@ -123,7 +123,7 @@ VOI = breast_mask & slice
 
 # %% Object
 phantom_VOI = phantom[VOI]
-O = ops.hadamard_op(phantom_VOI)
+O = phantom_VOI
 
 # %% Polarization
 B0_VOI = B0_raw[:, VOI]
@@ -139,8 +139,31 @@ P = ops.hadamard_op(B0_VOI)
 B1_VOI = B1_raw[:, VOI]
 omega_0 = gamma * np.linalg.norm(B0_VOI, axis=0)
 
-# Relaxation
-# flip_angle_deg = B1_eff_amp / np.mean(B1_eff_amp[slice & breast_mask]) * 90
+# Get B1_eff
+B1_eff = np.zeros((3, B1_VOI.shape[1]))
+for i in range(B1_VOI.shape[1]):
+    B1_eff[:, i] = acq.B1_effective(B1_VOI[:, i], B0_VOI[:, i])
 
-# %%
-t = np.linspace(0, 5, 100)  # ms
+# Get flip angle
+B1_eff_amp = np.linalg.norm(B1_eff, axis=0)
+flip_angle_deg = B1_eff_amp / np.mean(B1_eff_amp) * 90
+
+vis.scatter3d(X_axis, Y_axis, Z_axis, flip_angle_deg, xlim=xlim, ylim=ylim, zlim=zlim,
+              title='Flip Angle', mask=VOI)
+
+# Excite
+flip_angle_rad = np.deg2rad(flip_angle_deg)
+rot_mat = algb.rot_mat(B1_eff, flip_angle_rad)
+E = ops.matrix_op(rot_mat)
+
+# Visualization
+# Magnetization
+M = P.forward(O)
+
+vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(M, axis=0), xlim=xlim, ylim=ylim, zlim=zlim, title='Magnetization',
+              mask=VOI)
+
+# Excited Magnetization
+M_excited = E.forward(M)
+vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(M_excited, axis=0), xlim=xlim, ylim=ylim, zlim=zlim,
+              title='Excited Magnetization', mask=VOI)
