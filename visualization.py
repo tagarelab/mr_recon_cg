@@ -76,7 +76,8 @@ def scatter3d(B0_LR, B0_SI, B0_AP, grad, xlim=None, ylim=None, zlim=None, clim=N
         X_M = X_M[mask]
         Y_M = Y_M[mask]
         Z_M = Z_M[mask]
-        grad = grad[mask]
+        if grad.ndim == 3:
+            grad = grad[mask]
 
     scatter = ax.scatter(X_M, Y_M, Z_M, c=grad, s=1)
 
