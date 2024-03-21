@@ -10,6 +10,47 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 
 
+def quiver3d(vector, orig=None, label=None, xlim=None, ylim=None, zlim=None, title=None):
+    """
+    3D quiver plot
+    :param title:
+    :return:
+    """
+    if orig is None:
+        orig = [0, 0, 0]
+
+    if label is None:
+        label = np.arange(vector.shape[1])
+
+    colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k']
+
+    ax = plt.figure().add_subplot(projection='3d')
+
+    if xlim is not None:
+        ax.set_xlim(xlim)
+
+    if ylim is not None:
+        ax.set_ylim(ylim)
+
+    if zlim is not None:
+        ax.set_zlim(zlim)
+
+    for i in range(vector.shape[1]):
+        ax.quiver(orig[0], orig[1], orig[2], vector[0, i], vector[1, i], vector[2, i], label=label[i],
+                  colors=colors[i % len(colors)])
+
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_zlabel('z')
+    ax.axis('equal')
+
+    if title is not None:
+        ax.set_title(title)
+
+    ax.legend()
+    plt.show()
+
+
 def scatter3d(B0_LR, B0_SI, B0_AP, grad, xlim=None, ylim=None, zlim=None, clim=None, mask=None, title=None):
     """
     3D scatter plot

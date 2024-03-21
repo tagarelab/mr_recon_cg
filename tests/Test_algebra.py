@@ -9,12 +9,40 @@
 import unittest
 import numpy as np
 import algebra
+import visualization as vis
 
 if __name__ == '__main__':
     unittest.main()
 
 
 class TestAlgebra(unittest.TestCase):
+
+    def test_rot_mat(self):
+        """
+        Test the rot_mat function
+        :return:
+        """
+
+        orig_vec = np.array([0, 1, 0])
+        rot_axis = np.array([0, 0, 1])
+        theta = 90
+
+        # Create a rotation matrix
+        rot_mat = algebra.rot_mat(rot_axis, theta * np.pi / 180)
+
+        # Check if the output dimensions are correct
+        assert rot_mat.shape == (3, 3)
+
+        new_vec = np.matmul(rot_mat, orig_vec)
+
+        # Check if the new vector is correct
+        vis.quiver3d(np.array([orig_vec, new_vec, rot_axis]).T,
+                     xlim=[-2, 2], ylim=[-2, 2], zlim=[-2, 2],
+                     label=['Orig', 'Rotated', 'Rot Axis'],
+                     title='Rotated ' + str(theta) + ' degrees')
+
+        # Check if the rotation matrix is correct
+        # np.testing.assert_array_equal(rot_mat, np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]))
 
     def test_interp_3dmat(self):
         """
