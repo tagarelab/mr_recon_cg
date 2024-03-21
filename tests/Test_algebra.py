@@ -23,9 +23,9 @@ class TestAlgebra(unittest.TestCase):
         :return:
         """
 
-        orig_vec = np.array([0, 1, 0])
+        orig_vec = np.array([1, 1, 1])
         rot_axis = np.array([0, 0, 1])
-        theta = 90
+        theta = 360
 
         # Create a rotation matrix
         rot_mat = algebra.rot_mat(rot_axis, theta * np.pi / 180)

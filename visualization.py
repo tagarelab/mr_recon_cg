@@ -26,15 +26,6 @@ def quiver3d(vector, orig=None, label=None, xlim=None, ylim=None, zlim=None, tit
 
     ax = plt.figure().add_subplot(projection='3d')
 
-    if xlim is not None:
-        ax.set_xlim(xlim)
-
-    if ylim is not None:
-        ax.set_ylim(ylim)
-
-    if zlim is not None:
-        ax.set_zlim(zlim)
-
     for i in range(vector.shape[1]):
         ax.quiver(orig[0], orig[1], orig[2], vector[0, i], vector[1, i], vector[2, i], label=label[i],
                   colors=colors[i % len(colors)])
@@ -46,6 +37,15 @@ def quiver3d(vector, orig=None, label=None, xlim=None, ylim=None, zlim=None, tit
 
     if title is not None:
         ax.set_title(title)
+
+    if xlim is not None:
+        ax.set_xlim(xlim)
+
+    if ylim is not None:
+        ax.set_ylim(ylim)
+
+    if zlim is not None:
+        ax.set_zlim(zlim)
 
     ax.legend()
     plt.show()
