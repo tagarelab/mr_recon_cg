@@ -32,24 +32,47 @@ class matrix_op:
         matrix_op(A) converts the matrix A to a matrix 
         operator and its transpose
     """
-    def __init__(self,A):
-        self.A=A
-        
-    def forward(self,x):
-        return np.matmul(self.A,x)
-    
-    def transpose(self,x):
-        return np.matmul(np.transpose(self.A),x)
-    
-    
+
+    def __init__(self, A):
+        self.A = A
+
+    def forward(self, x):
+        return np.matmul(self.A, x)
+
+    def transpose(self, x):
+        return np.matmul(np.transpose(self.A), x)
+
+
+class hadamard_matrix_op:
+    """
+        hadarmard_matrix_op(A) performs matrix multiplication of A[:,:,i] and x[:,i]
+    """
+
+    def __init__(self, A):
+        self.A = A
+
+    def forward(self, x):
+        z = np.zeros((self.A.shape[0], self.A.shape[2]))
+        for i in range(self.A.shape[2]):
+            z[:, i] = np.matmul(self.A[:, :, i], x[:, i]).flatten()
+        return z
+
+    def transpose(self, x):
+        z = np.zeros((self.A.shape[0], self.A.shape[1]))
+        for i in range(self.A.shape[2]):
+            z[:, i] = np.matmul(self.A[:, :, i].T, x[:, i]).flatten()
+        return z
+
+
 class scalar_prod_op:
     """
        scalar_prod(a) is the scalar product with a
     """
-    def __init__(self,a):
-        self.a=a
-        
-    def forward(self,x):
+
+    def __init__(self, a):
+        self.a = a
+
+    def forward(self, x):
         return self.a*x
     
     def transpose(self,x):

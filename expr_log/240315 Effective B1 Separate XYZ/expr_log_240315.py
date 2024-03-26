@@ -154,7 +154,7 @@ vis.scatter3d(X_axis, Y_axis, Z_axis, flip_angle_deg, xlim=xlim, ylim=ylim, zlim
 # Excite
 flip_angle_rad = np.deg2rad(flip_angle_deg)
 rot_mat = algb.rot_mat(B1_eff, flip_angle_rad)
-E = ops.matrix_op(rot_mat)
+E = ops.hadamard_matrix_op(rot_mat)
 
 # Visualization
 # Magnetization
