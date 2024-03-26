@@ -54,19 +54,21 @@ B1_raw = np.array([B1_x, B1_y, B1_z])
 
 # %% Generate Mask and Phantom
 # Breast Mask
-R = 60
-height = 100
-loc = [0, 0, Z_axis[0]]
-chest_dim = [200, 200, 30]
-coil_tkns = 5
-breast_mask = mk.gen_breast_mask(X_axis, Y_axis, Z_axis, R=R, height=height, loc=loc, tkns=coil_tkns,
+R = 60  # mm
+height = 100  # mm
+breast_loc = np.array([0, 0, Z_axis[0]])  # mm
+chest_dim = np.array([200, 200, 30])  # mm
+coil_tkns = 5  # mm
+breast_mask = mk.gen_breast_mask(X_axis, Y_axis, Z_axis, R=R, height=height, breast_loc=breast_loc.copy(),
+                                 tkns=coil_tkns,
                                  chest_dim=chest_dim)
 
-# Sphere phantom
-phantom = mk.gen_sphere(X_axis, Y_axis, Z_axis, loc=loc + [0, 0, 20], rad=60)
-vis.scatter3d(X_axis, Y_axis, Z_axis, phantom, title='Sphere Phantom', mask=phantom, xlim=xlim, ylim=ylim,
-              zlim=zlim)
-vis.scatter3d(X_axis, Y_axis, Z_axis, phantom, title='Breast Mask', mask=breast_mask, xlim=xlim, ylim=ylim,
+# Generate phantom
+# phantom = mk.gen_sphere(X_axis, Y_axis, Z_axis, loc=loc + [0, 0, 20], rad=60)
+phantom = mk.gen_breast_mask(X_axis, Y_axis, Z_axis, R=R - 20, height=height, breast_loc=breast_loc.copy(),
+                             tkns=coil_tkns,
+                             chest_dim=chest_dim)
+vis.scatter3d(X_axis, Y_axis, Z_axis, phantom, title='Phantom in Breast Mask', mask=breast_mask, xlim=xlim, ylim=ylim,
               zlim=zlim)
 
 # %% slice selection

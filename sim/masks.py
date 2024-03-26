@@ -69,18 +69,26 @@ def mask2matrix(data, mask, x, y, z, dtype=complex):
     return data_matrix
 
 
-def gen_breast_mask(x, y, z, loc=[0, 0, 0], R=6, height=10, tkns=0.5, chest_dim=[12, 12, 3]):
+def gen_breast_mask(x, y, z, breast_loc=None, R=6, height=10, tkns=0.5, chest_dim=None):
     """
     Generate a breast mask. The breast is modeled as a half ellipsoid.
     This function is adapted from code from Yonghyun and edited & tested by the author.
-    :param x:
-    :param y:
-    :param z:
-    :param R:
-    :param height:
-    :return:
+    :param x: x-axis
+    :param y: y-axis
+    :param z: z-axis
+    :param R: radius of the breast
+    :param height: height of the breast
+    :param breast_loc: location of the breast tip
+    :param tkns: thickness of the coil
+    :param chest_dim: dimensions of the chest
+    :return: breast mask
     """
-    loc[2] = loc[2] + height
+    if chest_dim is None:
+        chest_dim = [12, 12, 3]
+    if breast_loc is None:
+        breast_loc = [0, 0, 0]
+    loc = breast_loc.copy()
+    breast_loc[2] += height
     mask = np.zeros((len(x), len(y), len(z)), dtype=bool)
     # for k in np.arange(np.floor(len(z)/2),len(z), dtype = int):
     for i in range(len(x)):
