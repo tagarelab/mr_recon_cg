@@ -405,3 +405,36 @@ def sn_recognition(signal, mask, lambda_val=6, tol=0.1, stepsize=1, max_iter=100
         print("Invalid optimization method.")
 
     return sn_prdct
+
+
+def add_polarization(signal, time, dt):
+    """
+    Add polarization time to the signal
+
+    Parameters:
+    - signal (numpy.ndarray): Input signal.
+    - time (numpy.ndarray): Time vector.
+    - dt (float): Time step.
+
+    Returns:
+    - numpy.ndarray: Polarized signal.
+    """
+    polar = np.zeros((1, int(time / dt)), dtype=complex)
+    signal = np.concatenate((polar, signal), axis=1)
+
+    return signal
+
+
+def remove_polarization(signal, time, dt):
+    """
+    Remove polarization time from the signal
+
+    Parameters:
+    - signal (numpy.ndarray): Input signal.
+    - time (numpy.ndarray): Time vector.
+    - dt (float): Time step.
+
+    Returns:
+    - numpy.ndarray: Polarized signal.
+    """
+    return signal[:, int(time / dt):]
