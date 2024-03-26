@@ -51,7 +51,8 @@ def quiver3d(vector, orig=None, label=None, xlim=None, ylim=None, zlim=None, tit
     plt.show()
 
 
-def scatter3d(B0_LR, B0_SI, B0_AP, grad, xlim=None, ylim=None, zlim=None, clim=None, mask=None, title=None):
+def scatter3d(B0_LR, B0_SI, B0_AP, grad, xlim=None, ylim=None, zlim=None, clim=None, mask=None, title=None,
+              xlabel="LR (mm)", ylabel="SI (mm)", zlabel="AP (mm)"):
     """
     3D scatter plot
     This function is adapted from a MATLAB function by Github Copilot and edited & tested by the author.
@@ -84,9 +85,9 @@ def scatter3d(B0_LR, B0_SI, B0_AP, grad, xlim=None, ylim=None, zlim=None, clim=N
     plt.colorbar(scatter)
 
     # ax.set_title("Liver Gradient at "+grad_str+" mT/m")
-    ax.set_xlabel('LR (mm)')
-    ax.set_ylabel('SI (mm)')
-    ax.set_zlabel('AP (mn)')
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_zlabel(zlabel)
     ax.axis('equal')
 
     if title is not None:
