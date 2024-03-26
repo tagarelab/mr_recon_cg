@@ -127,3 +127,12 @@ def array2complex(x):
     - numpy.ndarray: The complex array.
     """
     return x[..., :x.shape[-1] // 2] + 1j * x[..., x.shape[-1] // 2:]
+
+
+def snr(signal, noi_range=None):
+    sig_mean = np.abs(np.mean(signal, axis=1))
+    if noi_range is None:
+        noi_range = [0, len(sig_mean)]
+    sig_std = np.std(sig_mean[noi_range[0]:noi_range[1]])
+    noi_avg = np.mean(sig_mean[noi_range[0]:noi_range[1]])  # take off the noise floor when calculating SNR
+    return (np.max(sig_mean) - noi_avg) / sig_std
