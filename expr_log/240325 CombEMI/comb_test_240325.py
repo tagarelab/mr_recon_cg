@@ -80,7 +80,7 @@ def rmse(y_true, y_pred, axis=None):
     return rmse_values
 
 
-def gen_sn(signal, N_echoes, TE, dt, sn):
+def gen_sn(signal, N_echoes, TE, dt, sn, polar_time=0):
     """
     Generate complex structured noise and inject it into the signal.
 
@@ -95,12 +95,17 @@ def gen_sn(signal, N_echoes, TE, dt, sn):
     - numpy.ndarray: Generated structured noise (same t span like the input signal)
     - numpy.ndarray: Generated structured noise (continuous)
     """
+
+    if polar_time > 0:
+        signal_te = remove_polarization(signal, polar_time, dt)
+    else:
+        signal_te = signal
     # Generate the full signal
-    zfilled_data = np.reshape(signal, (-1, N_echoes))
+    zfilled_data = np.reshape(signal_te, (-1, N_echoes))
     acq_len = zfilled_data.shape[0]
 
     # Generate complex structured noise
-    tt = np.arange(0, TE * N_echoes, dt)
+    tt = np.arange(0, N_echoes * TE, dt)
     noi_gen = np.zeros_like(tt, dtype=complex)
 
     for i in range(sn.shape[1]):
@@ -117,8 +122,14 @@ def gen_sn(signal, N_echoes, TE, dt, sn):
     # plt.show()
 
     # Sample it the same way as the signal
-    noisy_data_mat = np.reshape(noi_gen, (-1, N_echoes))
-    noisy_data = noisy_data_mat[:acq_len, :].reshape(1, -1)
+    if polar_time > 0:
+        noi_te = noi_gen[int(polar_time / dt):]
+        noisy_data_mat = np.reshape(noi_te, (-1, N_echoes))
+        noisy_data = noisy_data_mat[:acq_len, :].reshape(1, -1)
+        noisy_data = np.concatenate(noi_gen[:, int(polar_time / dt)], noisy_data)
+    else:
+        noisy_data_mat = np.reshape(noi_gen, (-1, N_echoes))
+        noisy_data = noisy_data_mat[:acq_len, :].reshape(1, -1)
 
     return noisy_data, noi_gen
 
@@ -313,13 +324,13 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pr
     # Choose the mask to input
     input_mask = noi_all
     data_us = zfilled_data[input_mask]
-    # plt.figure()
-    # plt.plot(np.abs(noi_all), label="Noise Mask")
-    # plt.plot(np.abs(sig_all), label="Signal Mask")
-    # plt.plot(np.abs(samp_all), label="Sample Mask")
-    # plt.title("Masks")
-    # plt.legend()
-    # plt.show()
+    plt.figure()
+    plt.plot(np.abs(noi_all), label="Noise Mask")
+    plt.plot(np.abs(sig_all), label="Signal Mask")
+    plt.plot(np.abs(samp_all), label="Sample Mask")
+    plt.title("Masks")
+    plt.legend()
+    plt.show()
 
     # Predict the EMI
 
@@ -375,7 +386,7 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pr
 
 
 # %%
-def sn_recognition(signal, mask, lambda_val=6, tol=0.1, stepsize=1, max_iter=100, method="conj_grad_l1_reg"):
+def sn_recognition(signal, mask, lambda_val, tol=0.1, stepsize=1, max_iter=100, method="conj_grad_l1_reg"):
     mask_matrix = np.fft.fft(np.eye(len(signal)))[mask, :]
     y = np.multiply(mask, signal)
     if method == "conj_grad_l1_reg":

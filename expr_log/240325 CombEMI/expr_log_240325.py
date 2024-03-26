@@ -22,7 +22,7 @@ wrf = -(1 - 0.87) * 1e6  # Bloch-Siegert frequency (in units Hz)
 # Load .mat file
 mat_file = sp.io.loadmat('sim_input/big_epfl_brain.mat')
 phantom_img = sp.ndimage.zoom(mat_file['phantom'], sample_num / float(mat_file['phantom'].shape[0]), order=1)
-# phantom_img = np.zeros(phantom_img.shape, dtype=complex)   # ZERO PHANTOM FOR TESTING
+phantom_img = np.zeros(phantom_img.shape, dtype=complex)  # ZERO PHANTOM FOR TESTING
 
 # Convert image to frequency domain
 phantom_fft = cs.im2freq(phantom_img)
@@ -59,10 +59,10 @@ ctr_freq = 1e6  # Hz, coil center freq
 
 # White noise
 # wgn_snr = 10  # snr for Gaussian white noise
-wgn_db = 20  # power for Gaussian white noise
+wgn_db = -20  # power for Gaussian white noise
 
 # Pre-set structured noise
-sn = np.array([30, 10000, 0])  # amplitude and Hz for SN
+sn = np.array([1, 60, 0])  # amplitude and Hz for SN
 # sn = np.array([0, 0, 0])  # amplitude and Hz for SN
 sn = sn.reshape(3, sn.size // 3)  # reshape to 2D
 
@@ -72,7 +72,7 @@ amp_max = 35  # linear, not dB
 amp_min = 30
 
 # Comb params
-lambda_val = 15000  # regularization term
+lambda_val = 1.0  # regularization term
 step = 0.1  # step size
 max_iter = 10000  # number of iterations
 pre_drop = 0  # drop this many points at the front of each echo
@@ -101,7 +101,7 @@ for k in range(N_rep):
     # plt.colorbar()
 
     sim_noisy_sig = sim_noisy_sig + np.random.normal(0, 10 ** (wgn_db / 20), sim_noisy_sig.shape) + \
-                    1j * np.random.normal(0, 10 ** (wgn_db / 20), sim_noisy_sig.shape[0])
+                    1j * np.random.normal(0, 10 ** (wgn_db / 20), sim_noisy_sig.shape)
 
     img_fft = np.reshape(sim_noisy_sig, (-1, N_echoes))
     plt.figure()
@@ -129,6 +129,7 @@ for k in range(N_rep):
     cancelled_comb = cs.comb_optimized(signal=signal, N_echoes=N_echoes, TE=TE, dt=dt, lambda_val=lambda_val, step=step,
                                        max_iter=max_iter, tol=0.1, pre_drop=pre_drop, post_drop=post_drop,
                                        pk_win=pk_win)
+    vis.complex(cancelled_comb, name='Comb Estimated EMI', rect=True)
 
     # perform simulated probe-based cancellation
     probe = str_noi + np.random.normal(0, 10 ** (wgn_db / 20), str_noi.shape) + \
@@ -182,12 +183,12 @@ for k in range(N_rep):
 
     # Visualize 1D signal
     # Visualization of the 1D signal
-    vis.freq_plot(sig_org[0, :], dt=1e-5, name='Simulated Signal')
-    vis.freq_plot(str_noi[0, 0:70], dt=1e-5, name='Simulated EMI')
-    vis.freq_plot(noi_comb[0, :], dt=1e-5, name='Comb Estimated EMI')
-    vis.complex(sig_org[0, :], name='Original Signal', rect=True)
-    vis.complex(str_noi[0, 0:70], name='Simulated EMI', rect=True)
-    vis.complex(noi_comb[0, :], name='Comb Estimated EMI', rect=True)
+    vis.freq_plot(np.reshape(sig_org, newshape=sig_org.size), dt=1e-5, name='Simulated Signal')
+    vis.freq_plot(np.reshape(str_noi, newshape=str_noi.size), dt=1e-5, name='Simulated EMI')
+    vis.freq_plot(np.reshape(noi_comb, newshape=noi_comb.size), dt=1e-5, name='Comb Estimated EMI')
+    vis.complex(np.reshape(sig_org, newshape=sig_org.size), name='Original Signal', rect=True)
+    vis.complex(np.reshape(str_noi, newshape=str_noi.size), name='Simulated EMI', rect=True)
+    vis.complex(np.reshape(noi_comb, newshape=noi_comb.size), name='Comb Estimated EMI', rect=True)
 
 # Calculate average RMSE
 rmse_org_freq = rmse_org_freq_k / N_rep

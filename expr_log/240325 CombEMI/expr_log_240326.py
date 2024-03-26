@@ -63,7 +63,7 @@ ctr_freq = 1e6  # Hz, coil center freq
 wgn_db = 20  # power for Gaussian white noise
 
 # Pre-set structured noise
-sn = np.array([30, 10000, 0])  # amplitude and Hz for SN
+sn = np.array([1, 60, 0])  # amplitude and Hz for SN
 # sn = np.array([0, 0, 0])  # amplitude and Hz for SN
 sn = sn.reshape(3, sn.size // 3)  # reshape to 2D
 
@@ -88,14 +88,15 @@ rmse_pro_freq_k = 0
 rmse_org_img_k = 0
 rmse_comb_img_k = 0
 rmse_pro_img_k = 0
+
 for k in range(N_rep):
     # generate random structured noise
     # sn = rand_single_sn(N_sn, amp_max, amp_min, ctr_freq, samp_freq, N_echoes * echo_len)
 
     # simulate noisy signal
-    sim_noisy_sig = sim_sig
+    sim_noisy_sig = cs.add_polarization(sim_sig, time=polar_time, dt=dt)
 
-    img_fft = np.reshape(sim_noisy_sig, (-1, N_echoes))
+    # img_fft = np.reshape(sim_noisy_sig, (-1, N_echoes))
     # plt.figure()
     # plt.imshow(np.abs(freq2im(img_fft)), vmin=0, vmax=1)
     # plt.colorbar()
@@ -103,12 +104,12 @@ for k in range(N_rep):
     sim_noisy_sig = sim_noisy_sig + np.random.normal(0, 10 ** (wgn_db / 20), sim_noisy_sig.shape) + \
                     1j * np.random.normal(0, 10 ** (wgn_db / 20), sim_noisy_sig.shape[0])
 
-    img_fft = np.reshape(sim_noisy_sig, (-1, N_echoes))
+    img_fft = np.reshape(cs.remove_polarization(sim_noisy_sig, polar_time, dt), (-1, N_echoes))
     plt.figure()
     plt.imshow(np.abs(cs.freq2im(img_fft)), vmin=0, vmax=1)
     plt.colorbar()
 
-    [str_noi, _] = cs.gen_sn(sim_noisy_sig, N_echoes, TE, dt, sn)
+    [str_noi, _] = cs.gen_sn(sim_noisy_sig, N_echoes, TE, dt, sn, polar_time)
     sim_noisy_sig = sim_noisy_sig + str_noi
     plt.title("With white noise")
 
@@ -117,7 +118,7 @@ for k in range(N_rep):
     # plt.plot(np.imag(str_noi[:100]))
     # plt.title("Noise added")
 
-    img_fft = np.reshape(sim_noisy_sig, (-1, N_echoes))
+    img_fft = np.reshape(cs.remove_polarization(sim_noisy_sig, polar_time, dt), (-1, N_echoes))
     plt.figure()
     plt.imshow(np.abs(cs.freq2im(img_fft)), vmin=0, vmax=1)
     plt.colorbar()
@@ -139,10 +140,10 @@ for k in range(N_rep):
     # signal_comb = signal - cancelled_comb
 
     # Generate imag
-    sig_org = np.reshape(signal, (-1, N_echoes))
+    sig_org = np.reshape(cs.remove_polarization(signal), (-1, N_echoes))
     # sig_comb = np.reshape(signal_comb, (-1, N_echoes))
-    sig_pro = np.reshape(signal_pro, (-1, N_echoes))
-    noi_comb = np.reshape(cancelled_comb, (-1, N_echoes)).T
+    sig_pro = np.reshape(cs.remove_polarization(signal_pro), (-1, N_echoes))
+    noi_comb = np.reshape(cs.remove_polarization(cancelled_comb), (-1, N_echoes)).T
     sig_comb = sig_org - noi_comb
 
     sig_org_img = cs.freq2im(sig_org)
