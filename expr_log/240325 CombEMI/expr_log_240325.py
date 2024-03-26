@@ -1,7 +1,7 @@
 """
-   Name: expr_log_240312.py
+   Name:
    Purpose:
-   Created on: 3/12/2024
+   Created on:
    Created by: Heng Sun
    Additional Notes: 
 """
@@ -10,7 +10,8 @@
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
-import comb_test_240312 as cs
+import comb_test_240325 as cs
+import visualization as vis
 
 # %%
 # imaging parameters
@@ -178,6 +179,15 @@ for k in range(N_rep):
     plt.title('Difference')
     plt.colorbar()
     plt.show()
+
+    # Visualize 1D signal
+    # Visualization of the 1D signal
+    vis.freq_plot(sig_org[0, :], dt=1e-5, name='Simulated Signal')
+    vis.freq_plot(str_noi[0, 0:70], dt=1e-5, name='Simulated EMI')
+    vis.freq_plot(noi_comb[0, :], dt=1e-5, name='Comb Estimated EMI')
+    vis.complex(sig_org[0, :], name='Original Signal', rect=True)
+    vis.complex(str_noi[0, 0:70], name='Simulated EMI', rect=True)
+    vis.complex(noi_comb[0, :], name='Comb Estimated EMI', rect=True)
 
 # Calculate average RMSE
 rmse_org_freq = rmse_org_freq_k / N_rep
