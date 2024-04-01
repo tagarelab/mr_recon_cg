@@ -88,7 +88,7 @@ def gen_breast_mask(x, y, z, breast_loc=None, R=6, height=10, tkns=0.5, chest_di
     if breast_loc is None:
         breast_loc = [0, 0, 0]
     loc = breast_loc.copy()
-    breast_loc[2] += height
+    loc[2] += height
     mask = np.zeros((len(x), len(y), len(z)), dtype=bool)
     # for k in np.arange(np.floor(len(z)/2),len(z), dtype = int):
     for i in range(len(x)):
