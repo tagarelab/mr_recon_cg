@@ -80,59 +80,78 @@ def rmse(y_true, y_pred, axis=None):
     return rmse_values
 
 
-def gen_sn(signal, N_echoes, TE, dt, sn, polar_time=0):
+def gen_sn(sn, length, dt):
     """
-    Generate complex structured noise and inject it into the signal.
+    Generate structured noise.
 
     Parameters:
-    - signal (numpy.ndarray): Input signal.
-    - N_echoes (int): Number of echoes.
-    - TE (float): Echo time.
-    - dt (float): Sampling interval.
     - sn (numpy.ndarray): Structured noise parameters (amplitude, frequency, phase).
+    - length (int): Length of the noise.
 
     Returns:
-    - numpy.ndarray: Generated structured noise (same t span like the input signal)
-    - numpy.ndarray: Generated structured noise (continuous)
+    - numpy.ndarray: Generated structured noise.
     """
-    polar_period = int(np.ceil(polar_time / dt))
-
-    if polar_time > 0:
-        signal_te = remove_polarization(signal, polar_time, dt)
-    else:
-        signal_te = signal
-    # Generate the full signal
-    zfilled_data = np.reshape(signal_te, (-1, N_echoes))
-    acq_len = zfilled_data.shape[0]
-
-    # Generate complex structured noise
-    tt = np.arange(0, N_echoes * TE + polar_time, dt)
+    tt = np.arange(0, length) * dt
     noi_gen = np.zeros_like(tt, dtype=complex)
-
     for i in range(sn.shape[1]):
         noi_gen += sn[0, i] * np.exp(1j * (2 * np.pi * sn[1, i] * tt + sn[2, i]))
 
-    # Visualize
-    # plt.figure()
-    # plt.plot(tt, np.real(noi_gen), label='Real')
-    # plt.plot(tt, np.imag(noi_gen), label='Imaginary')
-    # plt.title('Injected EMI')
-    # plt.legend()
-    # plt.xlabel('Time (s)')
-    # plt.ylabel('Amplitude')
-    # plt.show()
+    return noi_gen
 
-    # Sample it the same way as the signal
-    if polar_time > 0:
-        noi_te = noi_gen[polar_period:]
-        noisy_data_mat = np.reshape(noi_te, (-1, N_echoes))
-        noisy_data = noisy_data_mat[:acq_len, :].reshape(1, -1)
-        noisy_data = np.concatenate(noi_gen[:polar_period], noisy_data)
-    else:
-        noisy_data_mat = np.reshape(noi_gen, (-1, N_echoes))
-        noisy_data = noisy_data_mat[:acq_len, :].reshape(1, -1)
 
-    return noisy_data, noi_gen
+# def gen_sn(signal, N_echoes, TE, dt, sn, polar_time=0):
+#     """
+#     Generate complex structured noise and inject it into the signal.
+#
+#     Parameters:
+#     - signal (numpy.ndarray): Input signal.
+#     - N_echoes (int): Number of echoes.
+#     - TE (float): Echo time.
+#     - dt (float): Sampling interval.
+#     - sn (numpy.ndarray): Structured noise parameters (amplitude, frequency, phase).
+#
+#     Returns:
+#     - numpy.ndarray: Generated structured noise (same t span like the input signal)
+#     - numpy.ndarray: Generated structured noise (continuous)
+#     """
+#     polar_period = calculate_polar_period(polar_time=polar_time,dt=dt)
+#
+#     if polar_time > 0:
+#         signal_te = remove_polarization(signal, polar_time, dt)
+#     else:
+#         signal_te = signal
+#     # Generate the full signal
+#     zfilled_data = np.reshape(signal_te, (-1, N_echoes))
+#     acq_len = zfilled_data.shape[0]
+#
+#     # Generate complex structured noise
+#     tt = np.arange(0, N_echoes * TE + polar_time, dt)
+#     noi_gen = np.zeros_like(tt, dtype=complex)
+#
+#     for i in range(sn.shape[1]):
+#         noi_gen += sn[0, i] * np.exp(1j * (2 * np.pi * sn[1, i] * tt + sn[2, i]))
+#
+#     # Visualize
+#     # plt.figure()
+#     # plt.plot(tt, np.real(noi_gen), label='Real')
+#     # plt.plot(tt, np.imag(noi_gen), label='Imaginary')
+#     # plt.title('Injected EMI')
+#     # plt.legend()
+#     # plt.xlabel('Time (s)')
+#     # plt.ylabel('Amplitude')
+#     # plt.show()
+#
+#     # Sample it the same way as the signal
+#     # if polar_time > 0:
+#     #     noi_te = noi_gen[polar_period:]
+#     #     noisy_data_mat = np.reshape(noi_te, (-1, N_echoes))
+#     #     noisy_data = noisy_data_mat[:acq_len, :].reshape(1, -1)
+#     #     noisy_data = np.concatenate(noi_gen[:polar_period], noisy_data)
+#     # else:
+#     #     noisy_data_mat = np.reshape(noi_gen, (-1, N_echoes))
+#     #     noisy_data = noisy_data_mat[:acq_len, :].reshape(1, -1)
+#
+#     return noi_gen
 
 
 class ifft_op:
@@ -247,7 +266,8 @@ def admm_l2_l1(A, b, x0, l1_wt=1.0, rho=1.0, iter_max=100, eps=1e-2):
 
 
 # %% Define comb_optimized: the noise cancellation function
-def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pre_drop, post_drop, pk_win):
+def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pre_drop, post_drop, pk_win,
+                   polar_time=0):
     """
     Comb noise self-correction method
 
@@ -267,64 +287,80 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pr
     - acq_corr (numpy.ndarray): Corrected signal.
     """
     # Parameter formatting
-    signal = signal.T
+    polar_period = calculate_polar_period(polar_time=polar_time, dt=dt)
+    # signal_pol = signal[:, :polar_period]
+    signal_te = signal[polar_period:].T
     pre_drop = np.uint16(pre_drop)
     post_drop = np.uint16(post_drop)
 
     # Set binary mask for sampling window
     TE_len = np.uint16(TE / dt)
-    rep_len = signal.shape[0]
+    rep_len = signal_te.shape[0]
     acq_len = np.uint16(rep_len / N_echoes)
 
-    samp_1Echo = np.concatenate([np.ones(acq_len, dtype=bool), np.zeros(TE_len - acq_len, dtype=bool)])
-    samp_all = np.tile(samp_1Echo, N_echoes)
+    # samp_1Echo = np.concatenate([np.ones(acq_len, dtype=bool), np.zeros(TE_len - acq_len, dtype=bool)])
+    # samp_all = np.tile(samp_1Echo, N_echoes)
 
     # Auto peak recognition to create comb
     sig_len_hf = np.uint16((acq_len - pre_drop - post_drop) * pk_win / 2)
 
     # Pick out the peak location
-    pks = np.abs(np.reshape(signal, (-1, N_echoes)))
+    pks = np.abs(np.reshape(signal_te, (-1, N_echoes)))
     pks[:16, :] = 0  # some time there's a leak of signal at the beginning
     pks_val, pks_id = np.max(pks, axis=0), np.argmax(pks, axis=0)
     max_pks_id = np.argpartition(pks_val, -10)[-10:]
     pk_id = np.uint16(np.mean(pks_id[max_pks_id]))
 
-    pk_id = 50  # temp solution for debug
+    pk_id = sig_len_hf  # temp solution for debug
+
+    # Generate masks
+    noi_all = gen_noi_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, dt)
+    sig_all = gen_sig_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, dt)
+    samp_all = gen_samp_mask(acq_len, N_echoes, TE_len, polar_time, dt)
 
     # Signal (echo peak) part only
-    sig_1Echo = np.zeros(acq_len, dtype=bool)
-    sig_1Echo[max(0, pk_id - sig_len_hf):min(pk_id + sig_len_hf, acq_len)] = 1
-    sig_all = np.tile(np.concatenate([sig_1Echo, np.zeros(TE_len - acq_len, dtype=bool)]), N_echoes)
+    # sig_1Echo = np.zeros(acq_len, dtype=bool)
+    # sig_1Echo[max(0, pk_id - sig_len_hf):min(pk_id + sig_len_hf, acq_len)] = 1
+    # sig_all = np.tile(np.concatenate([sig_1Echo, np.zeros(TE_len - acq_len, dtype=bool)]), N_echoes)
 
     # Noise part only
-    noi_1Echo = np.ones(acq_len, dtype=bool)
-    noi_1Echo[max(0, pk_id - sig_len_hf):min(pk_id + sig_len_hf, acq_len)] = 0
-    # noi_1Echo[:pre_drop] = 0
-    # noi_1Echo[-post_drop:] = 0
-    noi_all = np.tile(np.concatenate([noi_1Echo, np.zeros(TE_len - acq_len, dtype=bool)]), N_echoes)
+    # noi_1Echo = np.ones(acq_len, dtype=bool)
+    # noi_1Echo[max(0, pk_id - sig_len_hf):min(pk_id + sig_len_hf, acq_len)] = 0
+    # # noi_1Echo[:pre_drop] = 0
+    # # noi_1Echo[-post_drop:] = 0
+    # noi_all = np.tile(np.concatenate([noi_1Echo, np.zeros(TE_len - acq_len, dtype=bool)]), N_echoes)
 
     # Simulate a signal
-    Nc = 1  # Number of coils
+    # Nc = 1  # Number of coils
 
     # Time domain
-    t = np.arange(len(samp_all)) - len(samp_all) / 2
+    # t = np.arange(len(samp_all)) - len(samp_all) / 2
 
     # Set dimensions
-    x_dim, y_dim = len(t), 3
-    k1, k2 = np.arange(-x_dim / 2, x_dim / 2), np.arange(-y_dim / 2, y_dim / 2)
+    # x_dim, y_dim = len(t), 3
+    # k1, k2 = np.arange(-x_dim / 2, x_dim / 2), np.arange(-y_dim / 2, y_dim / 2)
 
-    # Get undersampled data and k-space
-    samp_data = signal.flatten('F')
-    zfilled_data = np.reshape(samp_data, (acq_len, -1))
-    zfilled_data = np.concatenate([zfilled_data, np.zeros((TE_len - acq_len, N_echoes))], axis=0)
-    zfilled_data = zfilled_data.flatten('F')
-    noi_data = zfilled_data[noi_all]
-    sig_data = zfilled_data[sig_all]
+    # # Get undersampled data and k-space
+    # samp_data = signal_te.flatten('F')
+    # zfilled_data = np.reshape(samp_data, (acq_len, -1))
+    # zfilled_data = np.concatenate([zfilled_data, np.zeros((TE_len - acq_len, N_echoes))], axis=0)
+    # zfilled_data = zfilled_data.flatten('F')
+    #
+    # # add polarization time
+    # zfilled_data = np.concatenate([signal_pol, zfilled_data], axis=1)
+
+    zfilled_data = sampled_to_full(signal, polar_time, dt, acq_len, N_echoes, TE_len)
+
+    # masked data
+    # noi_data = zfilled_data[noi_all]
+    # sig_data = zfilled_data[sig_all]
     samp_data = zfilled_data[samp_all]
 
     # Choose the mask to input
     input_mask = noi_all
-    data_us = zfilled_data[input_mask]
+    # data_us = zfilled_data[input_mask]
+
+    # Visualize the masks
     plt.figure()
     plt.plot(np.abs(noi_all), label="Noise Mask")
     plt.plot(np.abs(sig_all), label="Signal Mask")
@@ -353,37 +389,46 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pr
     plt.legend()
     plt.show()
 
-    return emi_prdct[samp_all]
+    return add_polarization(emi_prdct[samp_all], polar_time, dt)
 
 
-# %% md
-## Define main optimization function
-# %%
-# class cg_comb(sgp.app.App):
-#     def __init__(self, lambda_val, mask, y, max_iter, stepsize, tol, **kwargs):
-#         self.x = np.zeros((mask.shape[0], 1), np.complex128)
-#         self.y = np.expand_dims(y[mask], axis=1)
-#         # mask_matrix = np.fft.fft(np.eye(len(y)))[mask, :]
-#         mask_matrix = mask_mat(mask)
-#
-#         self.F = sgp.linop.FFT(self.x.shape, center=True, axes=(-1, -2))
-#         M = sgp.linop.MatMul(ishape=self.x.shape, mat=mask_matrix)
-#         self.A = M * self.F.H
-#
-#         proxg = sgp.prox.L1Reg(self.A.ishape, lambda_val)
-#
-#         def gradf(x):
-#             return self.A.H * (self.A * x - self.y)
-#
-#         alg = sgp.alg.GradientMethod(gradf=gradf, x=self.x, alpha=stepsize, proxg=proxg, accelerate=False,
-#                                      max_iter=max_iter,
-#                                      tol=tol, **kwargs)
-#         # alg = sgp.alg.ConjugateGradient(A=self.A, b=self.y, x=self.x, P=proxg, max_iter=max_iter, tol=0)
-#         super().__init__(alg)
-#
-#     def _output(self):
-#         # return self.F.H(self.x)
-#         return self.x
+def sampled_to_full(signal, polar_time, dt, acq_len, N_echoes, TE_len):
+    polar_period = calculate_polar_period(polar_time=polar_time, dt=dt)
+    signal = signal.flatten('F')
+    signal_pol = signal[:polar_period]
+    signal_te = signal[polar_period:]
+
+    # Get undersampled data and k-space
+    zfilled_data = np.reshape(signal_te, (acq_len, -1))
+    zfilled_data = np.concatenate([zfilled_data, np.zeros((TE_len - acq_len, N_echoes))], axis=0)
+    zfilled_data = zfilled_data.flatten('F')
+
+    # add polarization time
+    zfilled_data = np.concatenate([signal_pol, zfilled_data], axis=0)
+    return zfilled_data
+
+
+def gen_sig_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, dt):
+    sig_1Echo = np.zeros(acq_len, dtype=bool)
+    sig_1Echo[max(0, pk_id - sig_len_hf):min(pk_id + sig_len_hf, acq_len)] = 1
+    sig_all = np.tile(np.concatenate([sig_1Echo, np.zeros(TE_len - acq_len, dtype=bool)]), N_echoes)
+    sig_all = add_polarization(sig_all, polar_time, dt, value=0, type=bool)
+    return sig_all.astype(bool)
+
+
+def gen_noi_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, dt):
+    noi_1Echo = np.ones(acq_len, dtype=bool)
+    noi_1Echo[max(0, pk_id - sig_len_hf):min(pk_id + sig_len_hf, acq_len)] = 0
+    noi_all = np.tile(np.concatenate([noi_1Echo, np.zeros(TE_len - acq_len, dtype=bool)]), N_echoes)
+    noi_all = add_polarization(noi_all, polar_time, dt, value=1, type=bool)
+    return noi_all.astype(bool)
+
+
+def gen_samp_mask(acq_len, N_echoes, TE_len, polar_time, dt, pol=False):
+    samp_1Echo = np.concatenate([np.ones(acq_len, dtype=bool), np.zeros(TE_len - acq_len, dtype=bool)])
+    samp_all = np.tile(samp_1Echo, N_echoes)
+    samp_all = add_polarization(samp_all, polar_time, dt, value=pol, type=bool)
+    return samp_all.astype(bool)
 
 
 # %%
@@ -419,7 +464,7 @@ def sn_recognition(signal, mask, lambda_val, tol=0.1, stepsize=1, max_iter=100, 
     return sn_prdct
 
 
-def add_polarization(signal, time, dt):
+def add_polarization(signal, time, dt, value=0, type=complex):
     """
     Add polarization time to the signal
 
@@ -431,8 +476,12 @@ def add_polarization(signal, time, dt):
     Returns:
     - numpy.ndarray: Polarized signal.
     """
-    polar = np.zeros((1, int(np.ceil(time / dt))), dtype=complex)
-    signal = np.concatenate((polar, signal), axis=1)
+    if signal.ndim == 2:
+        polar = np.ones((1, calculate_polar_period(polar_time=time, dt=dt)), dtype=type) * value
+        signal = np.concatenate((polar, signal), axis=1)
+    elif signal.ndim == 1:
+        polar = np.ones(calculate_polar_period(polar_time=time, dt=dt), dtype=type) * value
+        signal = np.concatenate((polar, signal))
 
     return signal
 
@@ -449,4 +498,8 @@ def remove_polarization(signal, time, dt):
     Returns:
     - numpy.ndarray: Polarized signal.
     """
-    return signal[:, int(np.ceil(time / dt)):]
+    return signal[calculate_polar_period(polar_time=time, dt=dt):]
+
+
+def calculate_polar_period(polar_time, dt):
+    return int(np.ceil(polar_time / dt))
