@@ -165,11 +165,11 @@ class ifft_op:
 
     def forward(self, x):
         return np.fft.ifftn(np.fft.ifftshift(x))
+        # return np.fft.fftshift(np.fft.ifftn(np.fft.ifftshift(x)))
 
-    #        return np.real(np.fft.ifftn(np.fft.ifftshift(x)))
     def transpose(self, x):
-        #        return np.fft.fftshift(np.fft.fftn(np.real(x)))
         return np.fft.fftshift(np.fft.fftn(x))
+        # return np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(x)))
 
 
 class selection_op:
@@ -267,7 +267,7 @@ def admm_l2_l1(A, b, x0, l1_wt=1.0, rho=1.0, iter_max=100, eps=1e-2):
 
 # %% Define comb_optimized: the noise cancellation function
 def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pre_drop, post_drop, pk_win,
-                   polar_time=0):
+                   polar_time=0, rho=1.0):
     """
     Comb noise self-correction method
 
@@ -352,13 +352,9 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pr
     zfilled_data = sampled_to_full(signal, polar_time, dt, acq_len, N_echoes, TE_len)
 
     # masked data
-    # noi_data = zfilled_data[noi_all]
+    noi_data = zfilled_data[noi_all]
     # sig_data = zfilled_data[sig_all]
     samp_data = zfilled_data[samp_all]
-
-    # Choose the mask to input
-    input_mask = noi_all
-    # data_us = zfilled_data[input_mask]
 
     # Visualize the masks
     plt.figure()
@@ -369,44 +365,62 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pr
     plt.legend()
     plt.show()
 
+    pol_mask = gen_pol_mask(N_echoes, TE_len, polar_time, dt)
+    all_ones_mask = np.ones_like(samp_all)
+
+    input_mask = noi_all
+    plt.figure()
+    plt.plot(np.abs(input_mask))
+    plt.title("Input Mask")
+    plt.show()
+
+
     # Predict the EMI
 
     emi_prdct = sn_recognition(signal=zfilled_data, mask=input_mask, lambda_val=lambda_val, stepsize=step, tol=tol,
                                max_iter=max_iter,
-                               method="conj_grad_l1_reg")
+                               method="conj_grad_l1_reg", rho=rho)
     # emi_prdct = np.squeeze(emi_prdct)
     # factor = np.linalg.norm(noi_data, 1) / np.linalg.norm(emi_prdct[noi_all], 1)
     # emi_prdct *= factor
     # emi_prdct = np.abs(emi_prdct) * np.exp(-1j * np.angle(emi_prdct))
 
     # Get the output
-    acq_corr = samp_data - emi_prdct[samp_all]
+    # acq_corr = samp_data - emi_prdct[samp_all]
+    #
+    # plt.figure()
+    # plt.plot(np.abs(samp_data), label="Before correction")
+    # plt.plot(np.abs(acq_corr), label="After correction")
+    # plt.title("After correction")
+    # plt.legend()
+    # plt.show()
 
-    plt.figure()
-    plt.plot(np.abs(samp_data), label="Before correction")
-    plt.plot(np.abs(acq_corr), label="After correction")
-    plt.title("After correction")
-    plt.legend()
-    plt.show()
+    result = emi_prdct
+    # result = add_polarization(emi_prdct, polar_time, dt)
 
-    return add_polarization(emi_prdct[samp_all], polar_time, dt)
+    return result
 
 
 def sampled_to_full(signal, polar_time, dt, acq_len, N_echoes, TE_len):
     polar_period = calculate_polar_period(polar_time=polar_time, dt=dt)
-    signal = signal.flatten('F')
+    signal = signal.flatten('F')  # TODO: risk of error
     signal_pol = signal[:polar_period]
     signal_te = signal[polar_period:]
 
     # Get undersampled data and k-space
     zfilled_data = np.reshape(signal_te, (acq_len, -1))
     zfilled_data = np.concatenate([zfilled_data, np.zeros((TE_len - acq_len, N_echoes))], axis=0)
-    zfilled_data = zfilled_data.flatten('F')
+    zfilled_data = zfilled_data.flatten()
 
     # add polarization time
     zfilled_data = np.concatenate([signal_pol, zfilled_data], axis=0)
     return zfilled_data
 
+
+def gen_pol_mask(N_echoes, TE_len, polar_time, dt):
+    noi_all = np.zeros(np.uint16(TE_len * N_echoes), dtype=bool)
+    noi_all = add_polarization(noi_all, polar_time, dt, value=1, type=bool)
+    return noi_all.astype(bool)
 
 def gen_sig_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, dt):
     sig_1Echo = np.zeros(acq_len, dtype=bool)
@@ -432,8 +446,8 @@ def gen_samp_mask(acq_len, N_echoes, TE_len, polar_time, dt, pol=False):
 
 
 # %%
-def sn_recognition(signal, mask, lambda_val, tol=0.1, stepsize=1, max_iter=100, method="conj_grad_l1_reg"):
-    mask_matrix = np.fft.fft(np.eye(len(signal)))[mask, :]
+def sn_recognition(signal, mask, lambda_val, tol=0.1, stepsize=1, max_iter=100, method="conj_grad_l1_reg", rho=1.0):
+    # mask_matrix = np.fft.fft(np.eye(len(signal)))[mask, :]
     y = np.multiply(mask, signal)
     if method == "conj_grad_l1_reg":
         print("Conjugate Gradient method with L1 regularization")
@@ -441,7 +455,7 @@ def sn_recognition(signal, mask, lambda_val, tol=0.1, stepsize=1, max_iter=100, 
         S = selection_op(signal.shape, mask_id)
         F = ifft_op()
         A = op.composite_op(S, F)
-        sn_prdct, cg_flag = admm_l2_l1(A=A, b=signal[mask], x0=np.zeros_like(y), l1_wt=lambda_val, rho=1.0,
+        sn_prdct, cg_flag = admm_l2_l1(A=A, b=signal[mask], x0=np.zeros_like(y), l1_wt=lambda_val, rho=rho,
                                        iter_max=max_iter,
                                        eps=tol)
         # sn_prdct = cg_comb(lambda_val=lambda_val, mask=mask, y=y, max_iter=max_iter, stepsize=stepsize, tol=tol).run()
