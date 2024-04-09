@@ -215,7 +215,10 @@ def scatter_mean_std(data, name=None, xaxis=None):
 
 def plot_against_frequency(signal, frag_len, dt, name=None, ylim=None):
     freq_axis = fft.fftshift(fft.fftfreq(frag_len, dt)) / 1000
-    plt.plot(freq_axis, abs(signal))
+    plt.plot(freq_axis, abs(signal), label='Magnitude')
+    plt.plot(freq_axis, np.real(signal), label='Real')
+    plt.plot(freq_axis, np.imag(signal), label='Imaginary')
+    plt.legend()
     plt.xlabel('Frequency (kHz)')
     if ylim is not None:
         plt.ylim(ylim)
