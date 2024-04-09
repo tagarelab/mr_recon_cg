@@ -22,7 +22,7 @@ wrf = -(1 - 0.87) * 1e6  # Bloch-Siegert frequency (in units Hz)
 # Load .mat file
 mat_file = sp.io.loadmat('sim_input/big_epfl_brain.mat')
 phantom_img = sp.ndimage.zoom(mat_file['phantom'], sample_num / float(mat_file['phantom'].shape[0]), order=1)
-phantom_img = np.zeros(phantom_img.shape, dtype=complex)  # ZERO PHANTOM FOR TESTING
+# phantom_img = np.zeros(phantom_img.shape, dtype=complex)  # ZERO PHANTOM FOR TESTING
 
 # Convert image to frequency domain
 phantom_fft = cs.im2freq(phantom_img)
@@ -62,7 +62,7 @@ ctr_freq = 1e6  # Hz, coil center freq
 wgn_db = -20  # power for Gaussian white noise
 
 # Pre-set structured noise
-sn = np.array([1, 60, 0])  # amplitude and Hz for SN
+sn = np.array([1, 6000, 0])  # amplitude and Hz for SN
 # sn = np.array([0, 0, 0])  # amplitude and Hz for SN
 sn = sn.reshape(3, sn.size // 3)  # reshape to 2D
 
@@ -72,7 +72,7 @@ amp_max = 35  # linear, not dB
 amp_min = 30
 
 # Comb params
-lambda_val = 1.0  # regularization term
+lambda_val = 15000  # regularization term
 step = 0.1  # step size
 max_iter = 10000  # number of iterations
 pre_drop = 0  # drop this many points at the front of each echo
