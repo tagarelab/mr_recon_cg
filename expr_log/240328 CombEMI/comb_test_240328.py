@@ -12,6 +12,8 @@
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
+
+import visualization
 from optlib import c_grad as cg
 from optlib import operators as op
 
@@ -448,14 +450,17 @@ def gen_samp_mask(acq_len, N_echoes, TE_len, polar_time, dt, pol=False):
 # %%
 def sn_recognition(signal, mask, lambda_val, tol=0.1, stepsize=1, max_iter=100, method="conj_grad_l1_reg", rho=1.0):
     # mask_matrix = np.fft.fft(np.eye(len(signal)))[mask, :]
-    y = np.multiply(mask, signal)
+    # y = np.multiply(mask, signal)
     if method == "conj_grad_l1_reg":
         print("Conjugate Gradient method with L1 regularization")
         mask_id = np.where(mask)
         S = selection_op(signal.shape, mask_id)
         F = ifft_op()
         A = op.composite_op(S, F)
-        sn_prdct, cg_flag = admm_l2_l1(A=A, b=signal[mask], x0=np.zeros_like(y), l1_wt=lambda_val, rho=rho,
+        # x0 = np.zeros_like(signal)
+        x0 = peaks_only(F.transpose(signal))
+        visualization.complex(x0, name="Initial guess")
+        sn_prdct, cg_flag = admm_l2_l1(A=A, b=signal[mask], x0=x0, l1_wt=lambda_val, rho=rho,
                                        iter_max=max_iter,
                                        eps=tol)
         # sn_prdct = cg_comb(lambda_val=lambda_val, mask=mask, y=y, max_iter=max_iter, stepsize=stepsize, tol=tol).run()
@@ -476,6 +481,21 @@ def sn_recognition(signal, mask, lambda_val, tol=0.1, stepsize=1, max_iter=100, 
         print("Invalid optimization method.")
 
     return sn_prdct
+
+
+def peaks_only(signal):
+    """
+    Extract peaks from the signal
+
+    Parameters:
+    - signal (numpy.ndarray): Input signal.
+
+    Returns:
+    - numpy.ndarray: Peaks.
+    """
+    peaks = np.zeros_like(signal)
+    peaks[np.argmax(signal)] = signal[np.argmax(signal)]
+    return peaks
 
 
 def add_polarization(signal, time, dt, value=0, type=complex):

@@ -18,7 +18,7 @@ import visualization as vis
 sample_num = 70  # image size
 gyro_mag = 42.58 * 1e6  # gyro magnetic ratio
 wrf = -(1 - 0.87) * 1e6  # Bloch-Siegert frequency (in units Hz)
-polar_time = 0  # seconds
+polar_time = 2  # seconds
 
 # Load .mat file
 mat_file = sp.io.loadmat('sim_input/big_epfl_brain.mat')
@@ -61,7 +61,7 @@ ctr_freq = 1e6  # Hz, coil center freq
 
 # White noise
 # wgn_snr = 10  # snr for Gaussian white noise
-wgn_db = 0  # power for Gaussian white noise
+wgn_db = 5  # power for Gaussian white noise
 
 # Pre-set structured noise
 sn = np.array([10, 6000, 0])  # amplitude and Hz for SN
@@ -74,7 +74,7 @@ amp_max = 35  # linear, not dB
 amp_min = 30
 
 # Comb params
-lambda_val = 100  # regularization term
+lambda_val = 1  # regularization term
 rho = 0.1  # constant for the lagrange matrix, was 1.0 before
 # lambda_val = 3000000  # regularization term
 step = 0.1  # step size
@@ -149,7 +149,7 @@ for k in range(N_rep):
 
     cancelled_comb = cancelled_comb_raw[samp_mask_w_pol]
     comb_scaling = 1.0099999999999991  # not related to lambda TODO: why??
-    cancelled_comb = cancelled_comb * comb_scaling
+    # cancelled_comb = cancelled_comb * comb_scaling
 
     # perform simulated probe-based cancellation
     probe = str_noi[samp_mask_w_pol] + np.random.normal(0, 10 ** (wgn_db / 20), signal.shape) + \
