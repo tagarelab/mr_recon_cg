@@ -123,7 +123,7 @@ def gen_sn(sn, length, dt):
 #     else:
 #         signal_te = signal
 #     # Generate the full signal
-#     zfilled_data = np.reshape(signal_te, (-1, N_echoes))
+#     zfilled_data = np.reshape(signal_te, (N_echoes,-1))
 #     acq_len = zfilled_data.shape[0]
 #
 #     # Generate complex structured noise
@@ -146,11 +146,11 @@ def gen_sn(sn, length, dt):
 #     # Sample it the same way as the signal
 #     # if polar_time > 0:
 #     #     noi_te = noi_gen[polar_period:]
-#     #     noisy_data_mat = np.reshape(noi_te, (-1, N_echoes))
+#     #     noisy_data_mat = np.reshape(noi_te, (N_echoes,-1))
 #     #     noisy_data = noisy_data_mat[:acq_len, :].reshape(1, -1)
 #     #     noisy_data = np.concatenate(noi_gen[:polar_period], noisy_data)
 #     # else:
-#     #     noisy_data_mat = np.reshape(noi_gen, (-1, N_echoes))
+#     #     noisy_data_mat = np.reshape(noi_gen, (N_echoes,-1))
 #     #     noisy_data = noisy_data_mat[:acq_len, :].reshape(1, -1)
 #
 #     return noi_gen
@@ -307,7 +307,7 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pr
     sig_len_hf = np.uint16((acq_len - pre_drop - post_drop) * pk_win / 2)
 
     # Pick out the peak location
-    pks = np.abs(np.reshape(signal_te, (-1, N_echoes)))
+    pks = np.abs(np.reshape(signal_te, (N_echoes, -1)))
     pks[:16, :] = 0  # some time there's a leak of signal at the beginning
     pks_val, pks_id = np.max(pks, axis=0), np.argmax(pks, axis=0)
     max_pks_id = np.argpartition(pks_val, -10)[-10:]
@@ -410,11 +410,11 @@ def sampled_to_full(signal, polar_time, dt, acq_len, N_echoes, TE_len):
     signal_te = signal[polar_period:]
 
     # Get undersampled data and k-space
-    zfilled_data = np.reshape(signal_te, (acq_len, N_echoes), order='F')
+    zfilled_data = np.reshape(signal_te, (N_echoes, -1))
     visualization.imshow(np.real(zfilled_data), name="zfilled_data")
-    zfilled_data = np.concatenate([zfilled_data, np.zeros((TE_len - acq_len, N_echoes))], axis=0)
+    zfilled_data = np.concatenate([zfilled_data, np.zeros((N_echoes, TE_len - acq_len))], axis=1)
     visualization.imshow(np.real(zfilled_data), name="zfilled_data")
-    zfilled_data = zfilled_data.flatten('F')
+    zfilled_data = zfilled_data.flatten()
     visualization.complex(zfilled_data, name="zfilled_data")
 
     # add polarization time

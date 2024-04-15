@@ -24,7 +24,7 @@ polar_time = 0  # seconds
 mat_file = sp.io.loadmat('sim_input/big_epfl_brain.mat')
 phantom_img = sp.ndimage.zoom(mat_file['phantom'], sample_num / float(mat_file['phantom'].shape[0]), order=1)
 phantom_img = phantom_img[:, 0:60]  # for testing: otherwise the two dim have the same size
-# phantom_img = np.zeros(phantom_img.shape, dtype=complex)  # ZERO PHANTOM FOR TESTING
+phantom_img = np.zeros(phantom_img.shape, dtype=complex)  # ZERO PHANTOM FOR TESTING
 
 # Convert image to frequency domain
 phantom_fft = cs.im2freq(phantom_img)
@@ -32,8 +32,8 @@ phantom_fft = cs.im2freq(phantom_img)
 # Prepare simulated signal
 sim_sig = np.zeros((1, *phantom_fft.shape), dtype=complex)
 sim_sig[0, :, :] = phantom_fft
-N_echoes = sim_sig.shape[2]
-echo_len = sim_sig.shape[1]
+echo_len = sim_sig.shape[2]
+N_echoes = sim_sig.shape[1]
 sim_sig = sim_sig.reshape((1, N_echoes * echo_len))
 
 # Visualization of the phantom
@@ -108,7 +108,7 @@ for k in range(N_rep):
     samp_mask_w_pol = cs.gen_samp_mask(acq_len=echo_len, N_echoes=N_echoes, TE_len=np.uint16(TE / dt),
                                        polar_time=polar_time, dt=dt, pol=True)
 
-    # img_fft = np.reshape(sim_noisy_sig, (-1, N_echoes))
+    # img_fft = np.reshape(sim_noisy_sig, (N_echoes, -1))
     # plt.figure()
     # plt.imshow(np.abs(freq2im(img_fft)), vmin=0, vmax=1)
     # plt.colorbar()
@@ -116,7 +116,7 @@ for k in range(N_rep):
     # sim_noisy_sig = sim_noisy_sig + np.random.normal(0, 10 ** (wgn_db / 20), sim_noisy_sig.shape) + \
     #                 1j * np.random.normal(0, 10 ** (wgn_db / 20), sim_noisy_sig.shape)
 
-    # img_fft = np.reshape(sim_noisy_sig[samp_mask], (-1, N_echoes))
+    # img_fft = np.reshape(sim_noisy_sig[samp_mask], (N_echoes, -1))
     # plt.figure()
     # plt.imshow(np.abs(cs.freq2im(img_fft)), vmin=0, vmax=1)
     # plt.colorbar()
@@ -162,10 +162,10 @@ for k in range(N_rep):
     # signal_comb = signal - cancelled_comb
 
     # Generate imag
-    sig_org = np.reshape(signal[cs.calculate_polar_period(polar_time=polar_time, dt=dt):], (-1, N_echoes))
+    sig_org = np.reshape(signal[cs.calculate_polar_period(polar_time=polar_time, dt=dt):], (N_echoes, -1))
     # sig_comb = np.reshape(signal_comb, (-1, N_echoes))
-    sig_pro = np.reshape(signal_pro[cs.calculate_polar_period(polar_time=polar_time, dt=dt):], (-1, N_echoes))
-    noi_comb = np.reshape(cancelled_comb[cs.calculate_polar_period(polar_time=polar_time, dt=dt):], (-1, N_echoes))
+    sig_pro = np.reshape(signal_pro[cs.calculate_polar_period(polar_time=polar_time, dt=dt):], (N_echoes, -1))
+    noi_comb = np.reshape(cancelled_comb[cs.calculate_polar_period(polar_time=polar_time, dt=dt):], (N_echoes, -1))
     sig_comb = sig_org - noi_comb
 
     sig_org_img = cs.freq2im(sig_org)
