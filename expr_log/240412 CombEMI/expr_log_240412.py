@@ -10,7 +10,7 @@
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
-import comb_test_240328 as cs
+import comb_test_240412 as cs
 import visualization as vis
 
 # %%
@@ -18,12 +18,13 @@ import visualization as vis
 sample_num = 70  # image size
 gyro_mag = 42.58 * 1e6  # gyro magnetic ratio
 wrf = -(1 - 0.87) * 1e6  # Bloch-Siegert frequency (in units Hz)
-polar_time = 2  # seconds
+polar_time = 0  # seconds
 
 # Load .mat file
 mat_file = sp.io.loadmat('sim_input/big_epfl_brain.mat')
 phantom_img = sp.ndimage.zoom(mat_file['phantom'], sample_num / float(mat_file['phantom'].shape[0]), order=1)
-phantom_img = np.zeros(phantom_img.shape, dtype=complex)  # ZERO PHANTOM FOR TESTING
+phantom_img = phantom_img[:, 0:60]  # for testing: otherwise the two dim have the same size
+# phantom_img = np.zeros(phantom_img.shape, dtype=complex)  # ZERO PHANTOM FOR TESTING
 
 # Convert image to frequency domain
 phantom_fft = cs.im2freq(phantom_img)
@@ -54,7 +55,7 @@ sim_sig = sim_sig.reshape((1, N_echoes * echo_len))
 # Simulation parameters
 TE = 1.5e-3  # seconds
 dt = 1e-5  # seconds
-# TE = dt*70  #TODO: just for testing, get rid of this
+# TE = dt*70  #just for testing, get rid of this
 samp_freq = 1 / dt  # Hz, sampling freq
 ctr_freq = 1e6  # Hz, coil center freq
 # ctr_freq = 0  # Hz, coil center freq
@@ -148,7 +149,8 @@ for k in range(N_rep):
     # cancelled_comb = cancelled_comb * factor
 
     cancelled_comb = cancelled_comb_raw[samp_mask_w_pol]
-    comb_scaling = 1.0099999999999991  # not related to lambda TODO: why??
+    vis.complex(cancelled_comb, name='Comb Output after masking', rect=True)
+    # comb_scaling = 1.0099999999999991  # not related to lambda
     # cancelled_comb = cancelled_comb * comb_scaling
 
     # perform simulated probe-based cancellation

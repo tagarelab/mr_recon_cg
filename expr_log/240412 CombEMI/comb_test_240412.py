@@ -352,6 +352,7 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pr
     # zfilled_data = np.concatenate([signal_pol, zfilled_data], axis=1)
 
     zfilled_data = sampled_to_full(signal, polar_time, dt, acq_len, N_echoes, TE_len)
+    visualization.complex(zfilled_data, name="zfilled_data")
 
     # masked data
     noi_data = zfilled_data[noi_all]
@@ -370,7 +371,7 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pr
     pol_mask = gen_pol_mask(N_echoes, TE_len, polar_time, dt)
     all_ones_mask = np.ones_like(samp_all)
 
-    input_mask = noi_all
+    input_mask = all_ones_mask
     plt.figure()
     plt.plot(np.abs(input_mask))
     plt.title("Input Mask")
@@ -409,9 +410,12 @@ def sampled_to_full(signal, polar_time, dt, acq_len, N_echoes, TE_len):
     signal_te = signal[polar_period:]
 
     # Get undersampled data and k-space
-    zfilled_data = np.reshape(signal_te, (acq_len, -1))
+    zfilled_data = np.reshape(signal_te, (acq_len, N_echoes), order='F')
+    visualization.imshow(np.real(zfilled_data), name="zfilled_data")
     zfilled_data = np.concatenate([zfilled_data, np.zeros((TE_len - acq_len, N_echoes))], axis=0)
-    zfilled_data = zfilled_data.flatten()
+    visualization.imshow(np.real(zfilled_data), name="zfilled_data")
+    zfilled_data = zfilled_data.flatten('F')
+    visualization.complex(zfilled_data, name="zfilled_data")
 
     # add polarization time
     zfilled_data = np.concatenate([signal_pol, zfilled_data], axis=0)
@@ -460,6 +464,9 @@ def sn_recognition(signal, mask, lambda_val, tol=0.1, stepsize=1, max_iter=100, 
         # x0 = np.zeros_like(signal)
         x0 = peaks_only(F.transpose(signal))
         visualization.complex(x0, name="Initial guess")
+        visualization.complex(signal, "input signal")
+        visualization.complex(mask, "input mask")
+        visualization.complex(signal[mask], "input y")
         sn_prdct, cg_flag = admm_l2_l1(A=A, b=signal[mask], x0=x0, l1_wt=lambda_val, rho=rho,
                                        iter_max=max_iter,
                                        eps=tol)

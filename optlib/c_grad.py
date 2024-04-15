@@ -8,6 +8,8 @@
 
 import numpy as np
 import optlib.operators as op
+import visualization
+
 
 ##########################################################
 #  Utility functions for conjugate gradient
@@ -119,6 +121,8 @@ def solve_lin_cg(y,A,x0,B=op.zero_op(),c=0,max_iter=6,inner_max_iter=6,f_tol=1e-
     """
     ATA=lhs_op(A,B) #Get ATA
     b=A.transpose(y)+c #Calculate b
+    # visualization.complex(b,"b")
+    # visualization.complex(y, "y")
     return c_grad_lin(b,ATA,x0,max_iter=max_iter,inner_max_iter=inner_max_iter,f_tol=f_tol)
 
 def solve_L2_min(y,A,x0,B=op.zero_op(),max_iter=6,f_tol=1e-5):
