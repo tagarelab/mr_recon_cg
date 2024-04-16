@@ -23,7 +23,7 @@ polar_time = 0  # seconds
 # Load .mat file
 mat_file = sp.io.loadmat('sim_input/big_epfl_brain.mat')
 phantom_img = sp.ndimage.zoom(mat_file['phantom'], sample_num / float(mat_file['phantom'].shape[0]), order=1)
-phantom_img = phantom_img[:, 0:60]  # for testing: otherwise the two dim have the same size
+# phantom_img = phantom_img[:, 0:60]  # for testing: otherwise the two dim have the same size
 phantom_img = np.zeros(phantom_img.shape, dtype=complex)  # ZERO PHANTOM FOR TESTING
 
 # Convert image to frequency domain
@@ -55,7 +55,7 @@ sim_sig = sim_sig.reshape((1, N_echoes * echo_len))
 # Simulation parameters
 TE = 1.5e-3  # seconds
 dt = 1e-5  # seconds
-# TE = dt*70  #just for testing, get rid of this
+TE = dt * 70  # just for testing, get rid of this
 samp_freq = 1 / dt  # Hz, sampling freq
 ctr_freq = 1e6  # Hz, coil center freq
 # ctr_freq = 0  # Hz, coil center freq
@@ -65,7 +65,7 @@ ctr_freq = 1e6  # Hz, coil center freq
 wgn_db = 5  # power for Gaussian white noise
 
 # Pre-set structured noise
-sn = np.array([10, 6000, 0])  # amplitude and Hz for SN
+sn = np.array([10, 2, 0])  # amplitude and Hz for SN
 # sn = np.array([0, 0, 0])  # amplitude and Hz for SN
 sn = sn.reshape(3, sn.size // 3)  # reshape to 2D
 
@@ -75,11 +75,10 @@ amp_max = 35  # linear, not dB
 amp_min = 30
 
 # Comb params
-lambda_val = 1  # regularization term
-rho = 0.1  # constant for the lagrange matrix, was 1.0 before
-# lambda_val = 3000000  # regularization term
+lambda_val = 100  # regularization term
+rho = 1  # constant for the lagrange matrix, was 1.0 before
 step = 0.1  # step size
-max_iter = 1000  # number of iterations
+max_iter = 100  # number of iterations
 pre_drop = 0  # drop this many points at the front of each echo
 post_drop = 0  # drop this many points at the end of each echo
 pk_win = 0.33  # the window size for above-white-noise peak, should be within (0,1)
@@ -113,8 +112,8 @@ for k in range(N_rep):
     # plt.imshow(np.abs(freq2im(img_fft)), vmin=0, vmax=1)
     # plt.colorbar()
     #
-    # sim_noisy_sig = sim_noisy_sig + np.random.normal(0, 10 ** (wgn_db / 20), sim_noisy_sig.shape) + \
-    #                 1j * np.random.normal(0, 10 ** (wgn_db / 20), sim_noisy_sig.shape)
+    sim_noisy_sig = sim_noisy_sig + np.random.normal(0, 10 ** (wgn_db / 20), sim_noisy_sig.shape) + \
+                    1j * np.random.normal(0, 10 ** (wgn_db / 20), sim_noisy_sig.shape)
 
     # img_fft = np.reshape(sim_noisy_sig[samp_mask], (N_echoes, -1))
     # plt.figure()
@@ -145,13 +144,13 @@ for k in range(N_rep):
                                            max_iter=max_iter, tol=0.1, pre_drop=pre_drop, post_drop=post_drop,
                                            pk_win=pk_win, polar_time=polar_time, rho=rho)
 
-    # factor = abs(np.mean(abs(str_noi))/np.mean(abs(cancelled_comb)))
+    # factor = np.abs(np.mean(np.abs(str_noi))/np.mean(np.abs(cancelled_comb)))
     # cancelled_comb = cancelled_comb * factor
 
     cancelled_comb = cancelled_comb_raw[samp_mask_w_pol]
     vis.complex(cancelled_comb, name='Comb Output after masking', rect=True)
-    # comb_scaling = 1.0099999999999991  # not related to lambda
-    # cancelled_comb = cancelled_comb * comb_scaling
+    comb_scaling = 1.0099999999999991  # not related to lambda
+    cancelled_comb = cancelled_comb * comb_scaling
 
     # perform simulated probe-based cancellation
     probe = str_noi[samp_mask_w_pol] + np.random.normal(0, 10 ** (wgn_db / 20), signal.shape) + \
@@ -215,6 +214,7 @@ for k in range(N_rep):
     # Difference
     factor = str_noi / cancelled_comb_raw
     vis.complex(factor, name='True EMI/ Comb output', rect=True)
+    vis.complex(factor[samp_mask_w_pol], name='True EMI/ Comb output, masked', rect=True)
     vis.freq_plot(factor, dt=1e-5, name='True EMI/ Comb output')
 
     vis.complex(cancelled_comb_raw, name='Comb Raw Output', rect=True)

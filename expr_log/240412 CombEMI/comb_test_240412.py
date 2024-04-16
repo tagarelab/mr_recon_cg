@@ -202,13 +202,13 @@ class selection_op:
 def s_thresh(a, alpha):
     """ Soft thresholding needed for ADMM
     """
-    return (np.maximum(abs(a), alpha) - alpha) * a / np.abs(a)
+    return (np.maximum(np.abs(a), alpha) - alpha) * a / np.abs(a)
 
 
 def h_thresh(a, alpha):
     """ Hard thresholding needed for ADMM
     """
-    return (abs(a) >= alpha) * a
+    return (np.abs(a) >= alpha) * a
 
 
 def norm(x):
@@ -247,9 +247,16 @@ def admm_l2_l1(A, b, x0, l1_wt=1.0, rho=1.0, iter_max=100, eps=1e-2):
     while ((steps < iter_max) & ((norm(rk_1) > eps) | (norm(sk_1) > eps))):
         xk_1, cg_flag = cg.solve_lin_cg(b, A, xk, B=B, c=rho * (zk - uk), max_iter=20, inner_max_iter=6)
         zk_1 = s_thresh(xk_1 + uk, l1_wt / rho)
+        # zk_1 = h_thresh(xk_1 + uk, l1_wt / rho)
         uk_1 = uk + xk_1 - zk_1
         rk_1 = xk_1 - zk_1
         sk_1 = rho * (zk - zk_1)
+
+        # visualization.complex(xk_1, name="xk_1")
+        # visualization.complex(zk_1, name="zk_1")
+        # visualization.complex(uk_1, name="uk_1")
+        # visualization.complex(rk_1, name="rk_1")
+        # visualization.complex(sk_1, name="sk_1")
 
         # Update variables
         xk = xk_1
@@ -411,11 +418,11 @@ def sampled_to_full(signal, polar_time, dt, acq_len, N_echoes, TE_len):
 
     # Get undersampled data and k-space
     zfilled_data = np.reshape(signal_te, (N_echoes, -1))
-    visualization.imshow(np.real(zfilled_data), name="zfilled_data")
+    # visualization.imshow(np.real(zfilled_data), name="zfilled_data")
     zfilled_data = np.concatenate([zfilled_data, np.zeros((N_echoes, TE_len - acq_len))], axis=1)
-    visualization.imshow(np.real(zfilled_data), name="zfilled_data")
+    # visualization.imshow(np.real(zfilled_data), name="zfilled_data")
     zfilled_data = zfilled_data.flatten()
-    visualization.complex(zfilled_data, name="zfilled_data")
+    # visualization.complex(zfilled_data, name="zfilled_data")
 
     # add polarization time
     zfilled_data = np.concatenate([signal_pol, zfilled_data], axis=0)
@@ -463,27 +470,22 @@ def sn_recognition(signal, mask, lambda_val, tol=0.1, stepsize=1, max_iter=100, 
         A = op.composite_op(S, F)
         # x0 = np.zeros_like(signal)
         x0 = peaks_only(F.transpose(signal))
+        y = S.forward(signal)
         visualization.complex(x0, name="Initial guess")
         visualization.complex(signal, "input signal")
         visualization.complex(mask, "input mask")
-        visualization.complex(signal[mask], "input y")
-        sn_prdct, cg_flag = admm_l2_l1(A=A, b=signal[mask], x0=x0, l1_wt=lambda_val, rho=rho,
+        sn_prdct, cg_flag = admm_l2_l1(A=A, b=y, x0=x0, l1_wt=lambda_val, rho=rho,
                                        iter_max=max_iter,
                                        eps=tol)
         # sn_prdct = cg_comb(lambda_val=lambda_val, mask=mask, y=y, max_iter=max_iter, stepsize=stepsize, tol=tol).run()
         if not cg_flag:
             print("Step limit reached.")
 
-        # plt.figure()
-        # plt.plot(np.abs(sn_prdct))
-        # plt.title("EMI prediction in frequency domain")
-        # plt.show()
-        #
+        visualization.plot_against_frequency(sn_prdct, len(sn_prdct), 1e-5, "EMI prediction in frequency domain")
         sn_prdct = F.forward(sn_prdct)
-        # plt.figure()
-        # plt.plot(np.abs(sn_prdct))
-        # plt.title("EMI prediction in time domain")
-        # plt.show()
+        # sn_prdct = A.forward(sn_prdct)
+        # visualization.complex(sn_prdct, name="EMI prediction in time domain")
+
     else:
         print("Invalid optimization method.")
 
