@@ -65,7 +65,7 @@ ctr_freq = 1e6  # Hz, coil center freq
 wgn_db = 10  # power for Gaussian white noise
 
 # Pre-set structured noise
-sn = np.array([[10, 24601, 30], [13, -10086, 0]]).T  # amplitude and Hz and phase for SN
+sn = np.array([[10, 24601, 30], [13, -10086, 20]]).T  # amplitude and Hz and phase for SN
 # sn = np.array([0, 0, 0])  # amplitude and Hz for SN
 
 # Random Structured Noise
@@ -84,12 +84,12 @@ pk_win = 0.33  # the window size for above-white-noise peak, should be within (0
 
 # Test params
 N_rep = 1  # number of repetitions
-rmse_org_freq_k = 0
-rmse_comb_freq_k = 0
-rmse_pro_freq_k = 0
-rmse_org_img_k = 0
-rmse_comb_img_k = 0
-rmse_pro_img_k = 0
+rmse_org_freq = np.zeros(N_rep)
+rmse_comb_freq = np.zeros(N_rep)
+rmse_pro_freq = np.zeros(N_rep)
+rmse_org_img = np.zeros(N_rep)
+rmse_comb_img = np.zeros(N_rep)
+rmse_pro_img = np.zeros(N_rep)
 
 for k in range(N_rep):
     # generate random structured noise
@@ -171,17 +171,36 @@ for k in range(N_rep):
     sig_pro_img = cs.freq2im(sig_pro)
     noi_comb_img = cs.freq2im(noi_comb)
 
-    # Calculate sum of kth RMSE
-    rmse_org_freq_k = rmse_org_freq_k + cs.rmse(phantom_fft, sig_org)
-    rmse_comb_freq_k = rmse_comb_freq_k + cs.rmse(phantom_fft, sig_comb)
-    rmse_pro_freq_k = rmse_pro_freq_k + cs.rmse(phantom_fft, sig_pro)
+    # RMSE calculation
+    rmse_org_freq[k] = cs.rmse(phantom_fft, sig_org)
+    rmse_comb_freq[k] = cs.rmse(phantom_fft, sig_comb)
+    rmse_pro_freq[k] = cs.rmse(phantom_fft, sig_pro)
 
     phantom_img = cs.freq2im(cs.im2freq(phantom_img))
-    rmse_org_img_k = rmse_org_img_k + cs.rmse(phantom_img, sig_org_img)
-    rmse_comb_img_k = rmse_comb_img_k + cs.rmse(phantom_img, sig_comb_img)
-    rmse_pro_img_k = rmse_pro_img_k + cs.rmse(phantom_img, sig_pro_img)
+    rmse_org_img[k] = cs.rmse(np.abs(phantom_img), np.abs(sig_org_img))
+    rmse_comb_img[k] = cs.rmse(np.abs(phantom_img), np.abs(sig_comb_img))
+    rmse_pro_img[k] = cs.rmse(np.abs(phantom_img), np.abs(sig_pro_img))
 
     # Visualize
+    plt.figure()
+    plt.subplot(2, 2, 1)
+    plt.imshow(np.abs(sig_org_img), vmin=0, vmax=1)
+    plt.title('Orig, RMSE: ' + "{:.2f}".format(rmse_org_img[k]))
+    plt.colorbar()
+    plt.subplot(2, 2, 2)
+    plt.imshow(np.abs(sig_comb_img), vmin=0, vmax=1)
+    plt.title('Comb, RMSE: ' + "{:.2f}".format(rmse_comb_img[k]))
+    plt.colorbar()
+    plt.subplot(2, 2, 3)
+    plt.imshow(np.abs(sig_pro_img), vmin=0, vmax=1)
+    plt.title('Probe, RMSE: ' + "{:.2f}".format(rmse_pro_img[k]))
+    plt.colorbar()
+    plt.subplot(2, 2, 4)
+    plt.imshow(np.abs(noi_comb_img), vmin=0, vmax=1)
+    plt.title('Original-Comb')
+    plt.colorbar()
+    plt.show()
+
     plt.figure()
     plt.subplot(2, 2, 1)
     plt.imshow(np.abs(sig_org_img), vmin=0, vmax=1)
@@ -192,12 +211,31 @@ for k in range(N_rep):
     plt.title('Comb')
     plt.colorbar()
     plt.subplot(2, 2, 3)
-    plt.imshow(np.abs(sig_pro_img), vmin=0, vmax=1)
+    plt.imshow(np.abs(phantom_img), vmin=0, vmax=1)
+    plt.title('Simulated Phantom')
+    plt.colorbar()
+    plt.subplot(2, 2, 4)
+    plt.imshow(np.abs(sig_comb_img - phantom_img), vmin=0, vmax=1)
+    plt.title('Comb-Phantom')
+    plt.colorbar()
+    plt.show()
+
+    plt.figure()
+    plt.subplot(2, 2, 1)
+    plt.imshow(np.abs(sig_org))
+    plt.title('Original')
+    plt.colorbar()
+    plt.subplot(2, 2, 2)
+    plt.imshow(np.abs(sig_comb))
+    plt.title('Comb')
+    plt.colorbar()
+    plt.subplot(2, 2, 3)
+    plt.imshow(np.abs(sig_pro))
     plt.title('Probe')
     plt.colorbar()
     plt.subplot(2, 2, 4)
-    plt.imshow(np.abs(noi_comb_img), vmin=0, vmax=1)
-    plt.title('Difference')
+    plt.imshow(np.abs(noi_comb))
+    plt.title('Original-Comb')
     plt.colorbar()
     plt.show()
 
@@ -224,12 +262,3 @@ for k in range(N_rep):
 
     vis.complex(signal, name='Signal', rect=True)
     vis.freq_plot(signal, dt=1e-5, name='Signal')
-
-# Calculate average RMSE
-rmse_org_freq = rmse_org_freq_k / N_rep
-rmse_comb_freq = rmse_comb_freq_k / N_rep
-rmse_pro_freq = rmse_pro_freq_k / N_rep
-
-rmse_org_img = rmse_org_img_k / N_rep
-rmse_comb_img = rmse_comb_img_k / N_rep
-rmse_pro_img = rmse_pro_img_k / N_rep

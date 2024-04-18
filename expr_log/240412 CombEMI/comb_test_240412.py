@@ -155,6 +155,8 @@ def gen_sn(sn, length, dt):
 #
 #     return noi_gen
 
+def unpad(array, pad_width):
+    return array[pad_width:-pad_width]
 
 class ifft_op:
     """ Inverse fft operator. Takes a complex
@@ -163,14 +165,18 @@ class ifft_op:
     """
 
     def __init__(self):
-        pass
+        self.pad_width = 1
 
     def forward(self, x):
-        return np.fft.ifftn(np.fft.ifftshift(x))
+        # return np.fft.ifftn(np.fft.ifftshift(x))
+        return unpad(np.fft.ifftn(np.fft.ifftshift(np.pad(x, pad_width=self.pad_width, mode='constant'))),
+                     pad_width=self.pad_width)
         # return np.fft.fftshift(np.fft.ifftn(np.fft.ifftshift(x)))
 
     def transpose(self, x):
-        return np.fft.fftshift(np.fft.fftn(x))
+        # return np.fft.fftshift(np.fft.fftn(x))
+        return unpad(np.fft.fftshift(np.fft.fftn(np.pad(x, pad_width=self.pad_width, mode='constant'))),
+                     pad_width=self.pad_width)
         # return np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(x)))
 
 
