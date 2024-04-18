@@ -479,11 +479,21 @@ def sn_recognition(signal, mask, lambda_val, tol=0.1, stepsize=1, max_iter=100, 
                                        eps=tol)
         # sn_prdct = cg_comb(lambda_val=lambda_val, mask=mask, y=y, max_iter=max_iter, stepsize=stepsize, tol=tol).run()
         if not cg_flag:
-            print("Step limit reached.")
+            print("Step limit reached at ADMM.")
 
-        visualization.plot_against_frequency(sn_prdct, len(sn_prdct), 1e-5, "EMI prediction in frequency domain")
+        # visualization.plot_against_frequency(sn_prdct, len(sn_prdct), 1e-5, "EMI prediction in frequency domain")
+
+        H = op.hadamard_op(np.abs(sn_prdct) > 1e-1 * np.max(np.abs(sn_prdct)))
+        A = op.composite_op(S, F, H)
+        sn_prdct, cg_flag = cg.solve_lin_cg(y, A, sn_prdct, B=op.scalar_prod_op(0.05), max_iter=10)
+
+        if not cg_flag:
+            print("Step limit reached at CG for amplitude.")
+
+        # visualization.plot_against_frequency(sn_prdct, len(sn_prdct), 1e-5, "EMI prediction in frequency domain")
+
         sn_prdct = F.forward(sn_prdct)
-        # sn_prdct = A.forward(sn_prdct)
+
         # visualization.complex(sn_prdct, name="EMI prediction in time domain")
 
     else:

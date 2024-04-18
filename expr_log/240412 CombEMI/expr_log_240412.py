@@ -65,7 +65,7 @@ ctr_freq = 1e6  # Hz, coil center freq
 wgn_db = 5  # power for Gaussian white noise
 
 # Pre-set structured noise
-sn = np.array([10, 2, 0])  # amplitude and Hz for SN
+sn = np.array([10, 2461, 0])  # amplitude and Hz for SN
 # sn = np.array([0, 0, 0])  # amplitude and Hz for SN
 sn = sn.reshape(3, sn.size // 3)  # reshape to 2D
 
@@ -75,7 +75,7 @@ amp_max = 35  # linear, not dB
 amp_min = 30
 
 # Comb params
-lambda_val = 100  # regularization term
+lambda_val = 300  # regularization term
 rho = 1  # constant for the lagrange matrix, was 1.0 before
 step = 0.1  # step size
 max_iter = 100  # number of iterations
