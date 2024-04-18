@@ -24,7 +24,7 @@ polar_time = 0  # seconds
 mat_file = sp.io.loadmat('sim_input/big_epfl_brain.mat')
 phantom_img = sp.ndimage.zoom(mat_file['phantom'], sample_num / float(mat_file['phantom'].shape[0]), order=1)
 # phantom_img = phantom_img[:, 0:60]  # for testing: otherwise the two dim have the same size
-phantom_img = np.zeros(phantom_img.shape, dtype=complex)  # ZERO PHANTOM FOR TESTING
+# phantom_img = np.zeros(phantom_img.shape, dtype=complex)  # ZERO PHANTOM FOR TESTING
 
 # Convert image to frequency domain
 phantom_fft = cs.im2freq(phantom_img)
@@ -55,19 +55,18 @@ sim_sig = sim_sig.reshape((1, N_echoes * echo_len))
 # Simulation parameters
 TE = 1.5e-3  # seconds
 dt = 1e-5  # seconds
-TE = dt * 70  # just for testing, get rid of this
+# TE = dt * 70  # just for testing, get rid of this
 samp_freq = 1 / dt  # Hz, sampling freq
 ctr_freq = 1e6  # Hz, coil center freq
 # ctr_freq = 0  # Hz, coil center freq
 
 # White noise
 # wgn_snr = 10  # snr for Gaussian white noise
-wgn_db = 5  # power for Gaussian white noise
+wgn_db = 10  # power for Gaussian white noise
 
 # Pre-set structured noise
-sn = np.array([10, 2461, 0])  # amplitude and Hz for SN
+sn = np.array([[10, 24601, 30], [13, -10086, 0]]).T  # amplitude and Hz and phase for SN
 # sn = np.array([0, 0, 0])  # amplitude and Hz for SN
-sn = sn.reshape(3, sn.size // 3)  # reshape to 2D
 
 # Random Structured Noise
 N_sn = 1
@@ -75,7 +74,7 @@ amp_max = 35  # linear, not dB
 amp_min = 30
 
 # Comb params
-lambda_val = 300  # regularization term
+lambda_val = 3000  # regularization term
 rho = 1  # constant for the lagrange matrix, was 1.0 before
 step = 0.1  # step size
 max_iter = 100  # number of iterations

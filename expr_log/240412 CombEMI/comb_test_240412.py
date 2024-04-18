@@ -378,7 +378,7 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pr
     pol_mask = gen_pol_mask(N_echoes, TE_len, polar_time, dt)
     all_ones_mask = np.ones_like(samp_all)
 
-    input_mask = all_ones_mask
+    input_mask = noi_all
     plt.figure()
     plt.plot(np.abs(input_mask))
     plt.title("Input Mask")
