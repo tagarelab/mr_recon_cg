@@ -18,7 +18,7 @@ import visualization as vis
 sample_num = 70  # image size
 gyro_mag = 42.58 * 1e6  # gyro magnetic ratio
 wrf = -(1 - 0.87) * 1e6  # Bloch-Siegert frequency (in units Hz)
-polar_time = 0  # seconds
+polar_time = 1  # seconds
 theta = np.arange(0, 180, 180 / sample_num)  # degrees
 
 # Load .mat file
@@ -75,7 +75,7 @@ amp_max = 35  # linear, not dB
 amp_min = 30
 
 # Comb params
-lambda_val = 3000  # regularization term
+lambda_val = 100000  # regularization term
 rho = 1  # constant for the lagrange matrix, was 1.0 before
 step = 0.1  # step size
 max_iter = 100  # number of iterations
