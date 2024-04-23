@@ -399,22 +399,22 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pr
     samp_data = zfilled_data[samp_all]
 
     # Visualize the masks
-    plt.figure()
-    plt.plot(np.abs(noi_all), label="Noise Mask")
-    plt.plot(np.abs(sig_all), label="Signal Mask")
-    plt.plot(np.abs(samp_all), label="Sample Mask")
-    plt.title("Masks")
-    plt.legend()
-    plt.show()
+    # plt.figure()
+    # plt.plot(np.abs(noi_all), label="Noise Mask")
+    # plt.plot(np.abs(sig_all), label="Signal Mask")
+    # plt.plot(np.abs(samp_all), label="Sample Mask")
+    # plt.title("Masks")
+    # plt.legend()
+    # plt.show()
 
     pol_mask = gen_pol_mask(N_echoes, TE_len, polar_time, dt)
     all_ones_mask = np.ones_like(samp_all)
 
     input_mask = noi_all
-    plt.figure()
-    plt.plot(np.abs(input_mask))
-    plt.title("Input Mask")
-    plt.show()
+    # plt.figure()
+    # plt.plot(np.abs(input_mask))
+    # plt.title("Input Mask")
+    # plt.show()
 
     # Predict the EMI
 
