@@ -1,6 +1,6 @@
 """
    Name:
-   Purpose:
+   Purpose: quantitatively compare the performance of comb and probe-based EMI cancellation
    Created on:
    Created by: Heng Sun
    Additional Notes: 

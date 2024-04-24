@@ -99,61 +99,6 @@ def gen_sn(sn, length, dt):
 
     return noi_gen
 
-
-# def gen_sn(signal, N_echoes, TE, dt, sn, polar_time=0):
-#     """
-#     Generate complex structured noise and inject it into the signal.
-#
-#     Parameters:
-#     - signal (numpy.ndarray): Input signal.
-#     - N_echoes (int): Number of echoes.
-#     - TE (float): Echo time.
-#     - dt (float): Sampling interval.
-#     - sn (numpy.ndarray): Structured noise parameters (amplitude, frequency, phase).
-#
-#     Returns:
-#     - numpy.ndarray: Generated structured noise (same t span like the input signal)
-#     - numpy.ndarray: Generated structured noise (continuous)
-#     """
-#     polar_period = calculate_polar_period(polar_time=polar_time,dt=dt)
-#
-#     if polar_time > 0:
-#         signal_te = remove_polarization(signal, polar_time, dt)
-#     else:
-#         signal_te = signal
-#     # Generate the full signal
-#     zfilled_data = np.reshape(signal_te, (N_echoes,-1))
-#     acq_len = zfilled_data.shape[0]
-#
-#     # Generate complex structured noise
-#     tt = np.arange(0, N_echoes * TE + polar_time, dt)
-#     noi_gen = np.zeros_like(tt, dtype=complex)
-#
-#     for i in range(sn.shape[1]):
-#         noi_gen += sn[0, i] * np.exp(1j * (2 * np.pi * sn[1, i] * tt + sn[2, i]))
-#
-#     # Visualize
-#     # plt.figure()
-#     # plt.plot(tt, np.real(noi_gen), label='Real')
-#     # plt.plot(tt, np.imag(noi_gen), label='Imaginary')
-#     # plt.title('Injected EMI')
-#     # plt.legend()
-#     # plt.xlabel('Time (s)')
-#     # plt.ylabel('Amplitude')
-#     # plt.show()
-#
-#     # Sample it the same way as the signal
-#     # if polar_time > 0:
-#     #     noi_te = noi_gen[polar_period:]
-#     #     noisy_data_mat = np.reshape(noi_te, (N_echoes,-1))
-#     #     noisy_data = noisy_data_mat[:acq_len, :].reshape(1, -1)
-#     #     noisy_data = np.concatenate(noi_gen[:polar_period], noisy_data)
-#     # else:
-#     #     noisy_data_mat = np.reshape(noi_gen, (N_echoes,-1))
-#     #     noisy_data = noisy_data_mat[:acq_len, :].reshape(1, -1)
-#
-#     return noi_gen
-
 def unpad(array, pad_width):
     return array[pad_width:-pad_width]
 
@@ -495,7 +440,7 @@ def sn_recognition(signal, mask, lambda_val, tol=0.1, stepsize=1, max_iter=100, 
     # mask_matrix = np.fft.fft(np.eye(len(signal)))[mask, :]
     # y = np.multiply(mask, signal)
     if method == "conj_grad_l1_reg":
-        print("Conjugate Gradient method with L1 regularization")
+        print("ADMM with L1 regularization + Conjugate Gradient")
         mask_id = np.where(mask)
         S = selection_op(signal.shape, mask_id)
         F = ifft_op()
