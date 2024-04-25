@@ -81,6 +81,20 @@ def rmse(y_true, y_pred, axis=None):
     return rmse_values
 
 
+def percent_cancelled(pred_signal, true_signal):
+    """
+    Calculate the percentage of the signal that was cancelled.
+
+    Parameters:
+    - pred_signal (numpy.ndarray): The predicted signal.
+    - true_signal (numpy.ndarray): The true signal.
+
+    Returns:
+    - float: The percentage of the signal that was cancelled.
+    """
+    return 100 * np.linalg.norm(true_signal - pred_signal, 2) / np.linalg.norm(true_signal, 2)
+
+
 def gen_sn(sn, length, dt):
     """
     Generate structured noise.
@@ -98,6 +112,10 @@ def gen_sn(sn, length, dt):
         noi_gen += sn[0, i] * np.exp(1j * (2 * np.pi * sn[1, i] * tt + sn[2, i]))
 
     return noi_gen
+
+
+def gen_white_noise(wgn_lin, shape):
+    return np.random.normal(0, wgn_lin, shape) + 1j * np.random.normal(0, wgn_lin, shape)
 
 def unpad(array, pad_width):
     return array[pad_width:-pad_width]
@@ -336,7 +354,7 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pr
     # zfilled_data = np.concatenate([signal_pol, zfilled_data], axis=1)
 
     zfilled_data = sampled_to_full(signal, polar_time, dt, acq_len, N_echoes, TE_len)
-    visualization.complex(zfilled_data, name="zfilled_data")
+    # visualization.complex(zfilled_data, name="zfilled_data")
 
     # masked data
     noi_data = zfilled_data[noi_all]
@@ -362,10 +380,17 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pr
     # plt.show()
 
     # Predict the EMI
+    emi_prdct_tot = np.zeros_like(zfilled_data)
+    if lambda_val == -1:
+        lambda_val = auto_lambda(zfilled_data, rho, lambda_default=99999999)
+    while lambda_val > 0:
+        emi_prdct = sn_recognition(signal=zfilled_data, mask=input_mask, lambda_val=lambda_val, stepsize=step, tol=tol,
+                                   max_iter=max_iter,
+                                   method="conj_grad_l1_reg", rho=rho)
+        emi_prdct_tot += emi_prdct
+        zfilled_data[samp_all] = zfilled_data[samp_all] - emi_prdct[samp_all]
+        lambda_val = auto_lambda(zfilled_data, rho, lambda_default=lambda_val)
 
-    emi_prdct = sn_recognition(signal=zfilled_data, mask=input_mask, lambda_val=lambda_val, stepsize=step, tol=tol,
-                               max_iter=max_iter,
-                               method="conj_grad_l1_reg", rho=rho)
     # emi_prdct = np.squeeze(emi_prdct)
     # factor = np.linalg.norm(noi_data, 1) / np.linalg.norm(emi_prdct[noi_all], 1)
     # emi_prdct *= factor
@@ -381,10 +406,30 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pr
     # plt.legend()
     # plt.show()
 
-    result = emi_prdct
+    result = emi_prdct_tot
     # result = add_polarization(emi_prdct, polar_time, dt)
 
     return result
+
+
+def auto_lambda(signal, rho, lambda_default=20000, tol=0.5):
+    """
+    Automatically determine the lambda value for the signal.
+
+    Parameters:
+    - signal (numpy.ndarray): Input signal.
+    - rho (float): Augmented Lagrangian parameter for ADMM.
+
+    Returns:
+    - float: The lambda value.
+    - bool: No need for another iteration
+    """
+    lambda_val = np.max(np.abs(np.fft.fft(signal))) / rho * tol
+    if lambda_val > np.mean(np.abs(np.fft.fft(signal))) / rho * 10 and lambda_val < lambda_default * 0.8:
+        # print("Auto lambda: ", lambda_val)
+        return lambda_val
+    return -1
+
 
 
 def sampled_to_full(signal, polar_time, dt, acq_len, N_echoes, TE_len):
@@ -440,7 +485,7 @@ def sn_recognition(signal, mask, lambda_val, tol=0.1, stepsize=1, max_iter=100, 
     # mask_matrix = np.fft.fft(np.eye(len(signal)))[mask, :]
     # y = np.multiply(mask, signal)
     if method == "conj_grad_l1_reg":
-        print("ADMM with L1 regularization + Conjugate Gradient")
+        # print("ADMM with L1 regularization + Conjugate Gradient")
         mask_id = np.where(mask)
         S = selection_op(signal.shape, mask_id)
         F = ifft_op()
@@ -448,24 +493,25 @@ def sn_recognition(signal, mask, lambda_val, tol=0.1, stepsize=1, max_iter=100, 
         # x0 = np.zeros_like(signal)
         x0 = peaks_only(F.transpose(signal))
         y = S.forward(signal)
-        visualization.complex(x0, name="Initial guess")
-        visualization.complex(signal, "input signal")
-        visualization.complex(mask, "input mask")
-        sn_prdct, cg_flag = admm_l2_l1(A=A, b=y, x0=x0, l1_wt=lambda_val, rho=rho,
+        # visualization.complex(x0, name="Initial guess")
+        # visualization.complex(signal, "input signal")
+        # visualization.complex(mask, "input mask")
+        sn_prdct, admm_flag = admm_l2_l1(A=A, b=y, x0=x0, l1_wt=lambda_val, rho=rho,
                                        iter_max=max_iter,
                                        eps=tol)
         # sn_prdct = cg_comb(lambda_val=lambda_val, mask=mask, y=y, max_iter=max_iter, stepsize=stepsize, tol=tol).run()
-        if not cg_flag:
-            print("Step limit reached at ADMM.")
+
+        # if not admm_flag:
+        #     print("Step limit reached at ADMM.")
 
         # visualization.plot_against_frequency(sn_prdct, len(sn_prdct), 1e-5, "EMI prediction in frequency domain")
 
         H = op.hadamard_op(np.abs(sn_prdct) > 1e-1 * np.max(np.abs(sn_prdct)))
         A = op.composite_op(S, F, H)
-        sn_prdct, cg_flag = cg.solve_lin_cg(y, A, sn_prdct, B=op.scalar_prod_op(0.05), max_iter=10)
+        sn_prdct, cg_flag = cg.solve_lin_cg(y, A, sn_prdct, B=op.scalar_prod_op(0.05), max_iter=1)
 
-        if not cg_flag:
-            print("Step limit reached at CG for amplitude.")
+        # if not cg_flag:
+        #     print("Step limit reached at CG for amplitude.")
 
         # visualization.plot_against_frequency(sn_prdct, len(sn_prdct), 1e-5, "EMI prediction in frequency domain")
 
