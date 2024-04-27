@@ -12,7 +12,7 @@ import scipy as sp
 import matplotlib.pyplot as plt
 import visualization as vis
 
-data_name = 'Comb_Injected Frequency (Hz)_Empty_04252024'
+data_name = 'Comb_Injected EMI Phase (rad)_Empty_04252024'
 data_file = sp.io.loadmat('sim_output/' + data_name + '.mat')
 
 # Load data
@@ -61,5 +61,5 @@ plt.errorbar(param1, pc_comb_avg[:, 0], yerr=pc_comb_std[:, 0])
 plt.xlabel(param1_name)
 plt.ylabel('% Residue')
 plt.title('Comb % Residue vs ' + param1_name)
-plt.ylim([0, 100])
+plt.ylim([0, 20])
 plt.show()

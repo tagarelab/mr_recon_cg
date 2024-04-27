@@ -65,11 +65,14 @@ ctr_freq = 1e6  # Hz, coil center freq
 
 # White noise
 # wgn_snr = 10  # snr for Gaussian white noise
-wgn_db = 10  # power for Gaussian white noise
+# wgn_db = 10  # power for Gaussian white noise
+wgn_lin = 5  # linear power for Gaussian white noise
 
 # Pre-set structured noise
-# sn = np.array([[10, 24601, 30], [13, -10086, 20]]).T  # amplitude and Hz and phase for SN
-sn = np.array([[10, 300, 84]]).T  # amplitude and Hz for SN
+sn = np.array([[10, 24601, 30], [38, 4598, 40], [23, 23490, 3], [12, 38439, 34], [33, -10086, 20]]).T  # amplitude and
+# Hz and phase
+# for SN
+# sn = np.array([[10, 300, 0]]).T  # amplitude and Hz for SN
 
 # Random Structured Noise
 N_sn = 1
@@ -77,7 +80,7 @@ amp_max = 35  # linear, not dB
 amp_min = 30
 
 # Comb params
-lambda_val = 20000  # regularization term
+lambda_val = -1  # regularization term
 rho = 1  # constant for the lagrange matrix, was 1.0 before
 step = 0.1  # step size
 max_iter = 1000  # number of iterations
@@ -114,8 +117,9 @@ for k in range(N_rep):
     # plt.imshow(np.abs(freq2im(img_fft, theta=theta)), vmin=0, vmax=1)
     # plt.colorbar()
     #
-    sim_noisy_sig = sim_noisy_sig + np.random.normal(0, 10 ** (wgn_db / 20), sim_noisy_sig.shape) + \
-                    1j * np.random.normal(0, 10 ** (wgn_db / 20), sim_noisy_sig.shape)
+    # sim_noisy_sig = sim_noisy_sig + np.random.normal(0, 10 ** (wgn_db / 20), sim_noisy_sig.shape) + \
+    #                 1j * np.random.normal(0, 10 ** (wgn_db / 20), sim_noisy_sig.shape)
+    sim_noisy_sig = sim_noisy_sig + cs.gen_white_noise(wgn_lin, sim_noisy_sig.shape)
 
     img_fft = np.reshape(sim_noisy_sig[samp_mask], (N_echoes, -1))
     plt.figure()
@@ -150,12 +154,13 @@ for k in range(N_rep):
 
     cancelled_comb = cancelled_comb_raw[samp_mask_w_pol]
     vis.complex(cancelled_comb, name='Comb Output after masking', rect=True)
-    comb_scaling = 1.0099999999999991  # not related to lambda
-    cancelled_comb = cancelled_comb * comb_scaling
+    # comb_scaling = 1.0099999999999991  # not related to lambda
+    # cancelled_comb = cancelled_comb * comb_scaling
 
     # perform simulated probe-based cancellation
-    probe = str_noi[samp_mask_w_pol] + np.random.normal(0, 10 ** (wgn_db / 20), signal.shape) + \
-            1j * np.random.normal(0, 10 ** (wgn_db / 20), signal.shape[0])
+    probe = str_noi[samp_mask_w_pol] + cs.gen_white_noise(wgn_lin, signal.shape)
+    # probe = str_noi[samp_mask_w_pol] + np.random.normal(0, 10 ** (wgn_db / 20), signal.shape) + \
+    #         1j * np.random.normal(0, 10 ** (wgn_db / 20), signal.shape[0])
     signal_pro = signal - probe
 
     # calculate difference

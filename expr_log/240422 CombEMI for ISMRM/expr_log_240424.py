@@ -23,7 +23,7 @@ short_sig_len = 200  # length of the signal to be visualized
 sample_num = 70  # image size
 gyro_mag = 42.58 * 1e6  # gyro magnetic ratio
 wrf = -(1 - 0.87) * 1e6  # Bloch-Siegert frequency (in units Hz)
-polar_time = 0  # seconds
+polar_time = 1  # seconds
 theta = np.arange(0, 180, 180 / sample_num)  # degrees
 
 # Load .mat file
@@ -91,9 +91,12 @@ post_drop = 0  # drop this many points at the end of each echo
 pk_win = 0.33  # the window size for above-white-noise peak, should be within (0,1)
 
 # Test params
-param1_name = "Injected Frequency (Hz)"
-param1 = np.arange(20100, 20400, 10)  # possible param1
-# param1 = np.array([1000, 30000])  # possible param1
+# param1_name = "Injected Frequency (Hz)"
+# param1 = np.arange(20100, 20400, 10)  # possible param1
+
+param1_name = "Injected EMI Phase (rad)"
+param1 = np.arange(-30, 30, 2) / 30 * np.pi  # possible param1
+
 N_param1 = len(param1)  # number of repetitions
 
 param2_name = "Empty"
@@ -110,8 +113,10 @@ rmse_pro_img = np.zeros((N_rep, N_param1, N_param2))
 pc_comb = np.zeros((N_rep, N_param1, N_param2))
 
 for i in range(N_param1):
+    # sn_freq = param1[i]
+    sn_phase = param1[i]
+
     # Generate structured noise
-    sn_freq = param1[i]
     sn = np.array([[sn_amp, sn_freq, sn_phase]]).T  # amplitude and Hz and phase for SN
     print(param1_name + " now at " + str(i + 1) + " out of " + str(N_param1))
     wgn_lin = wgn_lin_ratio * sn_amp
