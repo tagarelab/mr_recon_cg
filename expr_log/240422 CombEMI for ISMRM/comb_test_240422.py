@@ -21,6 +21,11 @@ from optlib import operators as op
 
 # %%
 ## Define supporting functions
+def freq_axis(N, dt):
+    freq_axis = sp.fft.fftshift(sp.fft.fftfreq(N, dt))
+    return freq_axis
+
+
 def mask_mat(mask_arr):
     num_true = sum(mask_arr)
     num_all = len(mask_arr)
