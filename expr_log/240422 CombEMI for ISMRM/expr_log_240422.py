@@ -11,6 +11,7 @@ import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
 import comb_test_240422 as cs
+import visualization
 import visualization as vis
 import visualization_240422 as vis0422
 
@@ -62,6 +63,7 @@ dt = 1e-5  # seconds
 samp_freq = 1 / dt  # Hz, sampling freq
 ctr_freq = 1e6  # Hz, coil center freq
 # ctr_freq = 0  # Hz, coil center freq
+freq_axis = cs.freq_axis(int(np.ceil(N_echoes * TE / dt)), dt)  # Hz, frequency axis
 
 # White noise
 # wgn_snr = 10  # snr for Gaussian white noise
@@ -69,15 +71,19 @@ ctr_freq = 1e6  # Hz, coil center freq
 wgn_lin = 5  # linear power for Gaussian white noise
 
 # Pre-set structured noise
-sn = np.array([[10, 24601, 30], [38, 4598, 40], [23, 23490, 3], [12, 38439, 34], [33, -10086, 20]]).T  # amplitude and
+# sn = np.array([[50, freq_axis[3408], 30]]).T  # amplitude and
 # Hz and phase
 # for SN
 # sn = np.array([[10, 300, 0]]).T  # amplitude and Hz for SN
 
 # Random Structured Noise
-N_sn = 1
-amp_max = 35  # linear, not dB
-amp_min = 30
+N_sn = 3
+amp_max = 100  # linear, not dB
+amp_min = 10
+amp_list = np.linspace(amp_min, amp_max, 10000)
+phase_list = np.linspace(-np.pi, np.pi, 100)
+
+sn = cs.rand_sn_from_list(N_sn, amp_list, freq_axis, phase_list)
 
 # Comb params
 lambda_val = -1  # regularization term
@@ -144,6 +150,9 @@ for k in range(N_rep):
 
     # perform comb
     signal = sim_noisy_sig[samp_mask_w_pol]
+
+    visualization.complex(signal, name='Signal', rect=True)
+
     cancelled_comb_raw = cs.comb_optimized(signal=signal, N_echoes=N_echoes, TE=TE, dt=dt, lambda_val=lambda_val,
                                            step=step,
                                            max_iter=max_iter, tol=0.1, pre_drop=pre_drop, post_drop=post_drop,

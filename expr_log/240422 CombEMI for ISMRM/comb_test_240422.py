@@ -100,6 +100,46 @@ def percent_cancelled(pred_signal, true_signal):
     return 100 * np.linalg.norm(true_signal - pred_signal, 2) / np.linalg.norm(true_signal, 2)
 
 
+def rand_sn(N_sn, amp_range, freq_range, phase_range):
+    """
+    Generate random structured noise parameters.
+
+    Parameters:
+    - N_sn (int): Number of structured noise parameters.
+    - amp_range (tuple): Range of the amplitude.
+    - freq_range (tuple): Range of the frequency.
+    - phase_range (tuple): Range of the phase.
+
+    Returns:
+    - numpy.ndarray: Random structured noise parameters.
+    """
+    sn = np.zeros((3, N_sn))
+    sn[0, :] = np.random.uniform(amp_range[0], amp_range[1], N_sn)
+    sn[1, :] = np.random.uniform(freq_range[0], freq_range[1], N_sn)
+    sn[2, :] = np.random.uniform(phase_range[0], phase_range[1], N_sn)
+    return sn
+
+
+def rand_sn_from_list(N_sn, amp_list, freq_list, phase_list):
+    """
+    Generate random structured noise parameters.
+
+    Parameters:
+    - N_sn (int): Number of structured noise parameters.
+    - amp_range (tuple): Range of the amplitude.
+    - freq_range (tuple): Range of the frequency.
+    - phase_range (tuple): Range of the phase.
+
+    Returns:
+    - numpy.ndarray: Random structured noise parameters.
+    """
+    sn = np.zeros((3, N_sn))
+    sn[0, :] = np.random.choice(amp_list, N_sn)
+    sn[1, :] = np.random.choice(freq_list, N_sn)
+    sn[2, :] = np.random.choice(phase_list, N_sn)
+    return sn
+
+
 def gen_sn(sn, length, dt):
     """
     Generate structured noise.

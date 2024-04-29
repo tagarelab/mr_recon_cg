@@ -63,11 +63,13 @@ dt = 1e-5  # seconds
 samp_freq = 1 / dt  # Hz, sampling freq
 ctr_freq = 1e6  # Hz, coil center freq
 # ctr_freq = 0  # Hz, coil center freq
+freq_list = cs.freq_axis(int(np.ceil(N_echoes * TE / dt)), dt)  # Hz, frequency axis
 
 # White noise
 # wgn_snr = 10  # snr for Gaussian white noise
 # wgn_db = 10  # dB power for Gaussian white noise
-wgn_lin_ratio = 0.5  # linear power for Gaussian white noise
+wgn_lin = 5  # linear power for Gaussian white noise
+# wgn_lin_ratio = 0.5  # WN linear power relationship to EMI linear power
 
 # Pre-set structured noise
 # sn = np.array([[10, 3846, 30], [13, -10086, 20]]).T  # amplitude and Hz and phase for SN
@@ -80,6 +82,9 @@ sn_freq = 20000
 N_sn = 1
 amp_max = 15  # linear, not dB
 amp_min = 10
+amp_list = np.linspace(amp_min, amp_max, 10000)
+phase_list = np.linspace(-np.pi, np.pi, 100)
+
 
 # Comb params
 lambda_val = -1  # regularization term
@@ -94,8 +99,11 @@ pk_win = 0.33  # the window size for above-white-noise peak, should be within (0
 # param1_name = "Injected Frequency (Hz)"
 # param1 = np.arange(20100, 20400, 10)  # possible param1
 
-param1_name = "Injected EMI Phase (rad)"
-param1 = np.arange(-30, 30, 2) / 30 * np.pi  # possible param1
+# param1_name = "Injected EMI Phase (rad)"
+# param1 = np.arange(-30, 30, 2) / 30 * np.pi  # possible param1
+
+param1_name = "# of Injected EMI"
+param1 = np.arange(1, 11, 1, dtype=int)  # possible param1
 
 N_param1 = len(param1)  # number of repetitions
 
@@ -114,16 +122,19 @@ pc_comb = np.zeros((N_rep, N_param1, N_param2))
 
 for i in range(N_param1):
     # sn_freq = param1[i]
-    sn_phase = param1[i]
+    # sn_phase = param1[i]
+    N_sn = param1[i]
 
     # Generate structured noise
-    sn = np.array([[sn_amp, sn_freq, sn_phase]]).T  # amplitude and Hz and phase for SN
+    # sn = np.array([[sn_amp, sn_freq, sn_phase]]).T  # amplitude and Hz and phase for SN
+
     print(param1_name + " now at " + str(i + 1) + " out of " + str(N_param1))
-    wgn_lin = wgn_lin_ratio * sn_amp
+    # wgn_lin = wgn_lin_ratio * sn_amp
+
     for j in range(N_param2):
         for k in range(N_rep):
             # generate random structured noise
-            # sn = rand_single_sn(N_sn, amp_max, amp_min, ctr_freq, samp_freq, N_echoes * echo_len)
+            sn = cs.rand_sn_from_list(N_sn, amp_list, freq_list, phase_list)
 
             # simulate noisy signal
             sim_noisy_sig = cs.add_polarization(sim_sig, time=polar_time, dt=dt)
@@ -302,5 +313,6 @@ for i in range(N_param1):
 mr_io.save_dict({'rmse_org_freq': rmse_org_freq, 'rmse_comb_freq': rmse_comb_freq, 'rmse_pro_freq': rmse_pro_freq,
                  'rmse_org_img': rmse_org_img, 'rmse_comb_img': rmse_comb_img, 'rmse_pro_img': rmse_pro_img,
                  'pc_comb': pc_comb, 'param1': param1, 'param2': param2, 'param1_name': param1_name,
-                 'param2_name': param2_name}, name='Comb_' + param1_name + '_' + param2_name, path='sim_output/',
+                 'param2_name': param2_name}, name='Int_Comb_' + param1_name + '_' + param2_name,
+                path='sim_output/',
                 date=True, disp_msg=True)
