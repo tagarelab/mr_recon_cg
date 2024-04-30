@@ -86,7 +86,7 @@ def rmse(y_true, y_pred, axis=None):
     return rmse_values
 
 
-def percent_cancelled(pred_signal, true_signal):
+def percent_residue(pred_signal, true_signal):
     """
     Calculate the percentage of the signal that was cancelled.
 
@@ -426,15 +426,23 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pr
 
     # Predict the EMI
     emi_prdct_tot = np.zeros_like(zfilled_data)
-    if lambda_val == -1:
-        lambda_val = auto_lambda(zfilled_data, rho, lambda_default=99999999)
-    while lambda_val > 0:
-        emi_prdct = sn_recognition(signal=zfilled_data, mask=input_mask, lambda_val=lambda_val, stepsize=step, tol=tol,
+
+    # Multi-loop Auto lambda
+    # if lambda_val == -1:
+    #     lambda_val = auto_lambda(zfilled_data, rho, lambda_default=99999999)
+    # while lambda_val > 0:
+    #     emi_prdct = sn_recognition(signal=zfilled_data, mask=input_mask, lambda_val=lambda_val, stepsize=step, tol=tol,
+    #                                max_iter=max_iter,
+    #                                method="conj_grad_l1_reg", rho=rho)
+    #     emi_prdct_tot += emi_prdct
+    #     zfilled_data[samp_all] = zfilled_data[samp_all] - emi_prdct[samp_all]
+    #     lambda_val = auto_lambda(zfilled_data, rho, lambda_default=lambda_val)
+
+    # Single-loop Auto lambda
+    lambda_val = auto_lambda(zfilled_data, rho, lambda_default=99999999)
+    emi_prdct_tot = sn_recognition(signal=zfilled_data, mask=input_mask, lambda_val=lambda_val, stepsize=step, tol=tol,
                                    max_iter=max_iter,
                                    method="conj_grad_l1_reg", rho=rho)
-        emi_prdct_tot += emi_prdct
-        zfilled_data[samp_all] = zfilled_data[samp_all] - emi_prdct[samp_all]
-        lambda_val = auto_lambda(zfilled_data, rho, lambda_default=lambda_val)
 
     # emi_prdct = np.squeeze(emi_prdct)
     # factor = np.linalg.norm(noi_data, 1) / np.linalg.norm(emi_prdct[noi_all], 1)
