@@ -111,7 +111,7 @@ param2_name = "Empty"
 param2 = np.array([0])
 N_param2 = len(param2)  # possible param2
 
-N_rep = 5  # number of repetitions
+N_rep = 10  # number of repetitions
 rmse_org_freq = np.zeros((N_rep, N_param1, N_param2))
 rmse_comb_freq = np.zeros((N_rep, N_param1, N_param2))
 rmse_pro_freq = np.zeros((N_rep, N_param1, N_param2))

@@ -47,7 +47,7 @@ rmse_pro_img_std = np.std(rmse_pro_img, axis=0)
 # Plot RMSE with errorbar
 plt.figure()
 plt.errorbar(param1, rmse_org_img_avg[:, 0], yerr=rmse_org_img_std[:, 0], label='No Correction')
-plt.errorbar(param1, rmse_pro_img_avg[:, 0], yerr=rmse_pro_img_std[:, 0], label='Probe Corrected')
+plt.errorbar(param1, rmse_pro_img_avg[:, 0], yerr=rmse_pro_img_std[:, 0], label='Perfect Probe Corrected')
 plt.errorbar(param1, rmse_comb_img_avg[:, 0], yerr=rmse_comb_img_std[:, 0], label='Comb Corrected')
 plt.xlabel(param1_name)
 plt.ylabel('RMSE')
