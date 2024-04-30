@@ -23,7 +23,7 @@ short_sig_len = 200  # length of the signal to be visualized
 sample_num = 70  # image size
 gyro_mag = 42.58 * 1e6  # gyro magnetic ratio
 wrf = -(1 - 0.87) * 1e6  # Bloch-Siegert frequency (in units Hz)
-polar_time = 1  # seconds
+polar_time = 0  # seconds
 theta = np.arange(0, 180, 180 / sample_num)  # degrees
 
 # Load .mat file

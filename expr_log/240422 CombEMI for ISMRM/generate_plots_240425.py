@@ -12,7 +12,7 @@ import scipy as sp
 import matplotlib.pyplot as plt
 import visualization as vis
 
-data_name = 'Int_Comb_# of Injected EMI_Empty_04292024_1'
+data_name = 'Int_Comb_# of Injected EMI_Empty_04302024'
 data_file = sp.io.loadmat('sim_output/' + data_name + '.mat')
 
 # Load data
@@ -61,5 +61,14 @@ plt.errorbar(param1, pc_comb_avg[:, 0], yerr=pc_comb_std[:, 0])
 plt.xlabel(param1_name)
 plt.ylabel('% Residue')
 plt.title('Comb % Residue vs ' + param1_name)
-plt.ylim([0, 100])
+plt.ylim([0, 10])
 plt.show()
+
+# Plot all percentage corrected
+# plt.figure()
+# plt.plot(pc_comb[:,:,0])
+# plt.xlabel("Repetition No.")
+# plt.ylabel('% Residue')
+# # plt.title('Comb % Residue vs # of Repetitions')
+# # plt.ylim([0, 100])
+# plt.show()

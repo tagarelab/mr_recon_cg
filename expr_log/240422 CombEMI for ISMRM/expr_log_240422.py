@@ -11,9 +11,8 @@ import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
 import comb_test_240422 as cs
-import visualization
 import visualization as vis
-import visualization_240422 as vis0422
+
 
 # %%
 # visualization parameters
@@ -151,7 +150,7 @@ for k in range(N_rep):
     # perform comb
     signal = sim_noisy_sig[samp_mask_w_pol]
 
-    visualization.complex(signal, name='Signal', rect=True)
+    vis.complex(signal, name='Signal', rect=True)
 
     cancelled_comb_raw = cs.comb_optimized(signal=signal, N_echoes=N_echoes, TE=TE, dt=dt, lambda_val=lambda_val,
                                            step=step,

@@ -428,21 +428,21 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pr
     emi_prdct_tot = np.zeros_like(zfilled_data)
 
     # Multi-loop Auto lambda
-    # if lambda_val == -1:
-    #     lambda_val = auto_lambda(zfilled_data, rho, lambda_default=99999999)
-    # while lambda_val > 0:
-    #     emi_prdct = sn_recognition(signal=zfilled_data, mask=input_mask, lambda_val=lambda_val, stepsize=step, tol=tol,
-    #                                max_iter=max_iter,
-    #                                method="conj_grad_l1_reg", rho=rho)
-    #     emi_prdct_tot += emi_prdct
-    #     zfilled_data[samp_all] = zfilled_data[samp_all] - emi_prdct[samp_all]
-    #     lambda_val = auto_lambda(zfilled_data, rho, lambda_default=lambda_val)
-
-    # Single-loop Auto lambda
-    lambda_val = auto_lambda(zfilled_data, rho, lambda_default=99999999)
-    emi_prdct_tot = sn_recognition(signal=zfilled_data, mask=input_mask, lambda_val=lambda_val, stepsize=step, tol=tol,
+    if lambda_val == -1:
+        lambda_val = auto_lambda(zfilled_data, rho)
+    while lambda_val > 0:
+        emi_prdct = sn_recognition(signal=zfilled_data, mask=input_mask, lambda_val=lambda_val, stepsize=step, tol=tol,
                                    max_iter=max_iter,
                                    method="conj_grad_l1_reg", rho=rho)
+        emi_prdct_tot += emi_prdct
+        zfilled_data[samp_all] = zfilled_data[samp_all] - emi_prdct[samp_all]
+        lambda_val = auto_lambda(zfilled_data, rho, lambda_default=lambda_val)
+
+    # Single-loop Auto lambda
+    # lambda_val = auto_lambda(zfilled_data, rho, lambda_default=99999999)
+    # emi_prdct_tot = sn_recognition(signal=zfilled_data, mask=input_mask, lambda_val=lambda_val, stepsize=step, tol=tol,
+    #                                max_iter=max_iter,
+    #                                method="conj_grad_l1_reg", rho=rho)
 
     # emi_prdct = np.squeeze(emi_prdct)
     # factor = np.linalg.norm(noi_data, 1) / np.linalg.norm(emi_prdct[noi_all], 1)
@@ -465,7 +465,7 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pr
     return result
 
 
-def auto_lambda(signal, rho, lambda_default=20000, tol=0.5):
+def auto_lambda(signal, rho, lambda_default=np.inf, tol=0.4, cvg=0.95, ft_prtct=20):
     """
     Automatically determine the lambda value for the signal.
 
@@ -478,7 +478,8 @@ def auto_lambda(signal, rho, lambda_default=20000, tol=0.5):
     - bool: No need for another iteration
     """
     lambda_val = np.max(np.abs(np.fft.fft(signal))) / rho * tol
-    if lambda_val > np.mean(np.abs(np.fft.fft(signal))) / rho * 10 and lambda_val < lambda_default * 0.8:
+    if lambda_val > np.mean(np.abs(np.fft.fft(signal))) / rho * ft_prtct and lambda_val < lambda_default * cvg:
+        # print("avg sig: ", np.mean(np.abs(np.fft.fft(signal))) / rho)
         # print("Auto lambda: ", lambda_val)
         return lambda_val
     return -1
