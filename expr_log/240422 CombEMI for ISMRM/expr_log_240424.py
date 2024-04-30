@@ -80,7 +80,7 @@ sn_freq = 20000
 
 # Random Structured Noise
 N_sn = 1
-amp_max = 15  # linear, not dB
+amp_max = 100  # linear, not dB
 amp_min = 10
 amp_list = np.linspace(amp_min, amp_max, 10000)
 phase_list = np.linspace(-np.pi, np.pi, 100)
@@ -220,7 +220,7 @@ for i in range(N_param1):
             rmse_org_freq[k, i, j] = cs.rmse(np.abs(phantom_fft), np.abs(sig_org))
             rmse_comb_freq[k, i, j] = cs.rmse(np.abs(phantom_fft), np.abs(sig_comb))
             rmse_pro_freq[k, i, j] = cs.rmse(np.abs(phantom_fft), np.abs(sig_pro))
-            pc_comb[k, i, j] = cs.percent_cancelled(cancelled_comb, str_noi[samp_mask_w_pol])
+            pc_comb[k, i, j] = cs.percent_residue(cancelled_comb, str_noi[samp_mask_w_pol])
 
             phantom_img = cs.freq2im(cs.im2freq(phantom_img, theta=theta), theta=theta)
             rmse_org_img[k, i, j] = cs.rmse(np.abs(phantom_img), np.abs(sig_org_img))

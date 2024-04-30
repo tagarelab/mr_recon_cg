@@ -77,7 +77,7 @@ wgn_lin = 5  # linear power for Gaussian white noise
 # sn = np.array([[10, 300, 0]]).T  # amplitude and Hz for SN
 
 # Random Structured Noise
-N_sn = 3
+N_sn = 10
 amp_max = 100  # linear, not dB
 amp_min = 10
 amp_list = np.linspace(amp_min, amp_max, 10000)
@@ -196,6 +196,8 @@ for k in range(N_rep):
     rmse_org_img[k] = cs.rmse(np.abs(phantom_img), np.abs(sig_org_img))
     rmse_comb_img[k] = cs.rmse(np.abs(phantom_img), np.abs(sig_comb_img))
     rmse_pro_img[k] = cs.rmse(np.abs(phantom_img), np.abs(sig_pro_img))
+
+    print(cs.percent_residue(cancelled_comb, str_noi[samp_mask_w_pol]))
 
     # Visualize
     plt.figure()

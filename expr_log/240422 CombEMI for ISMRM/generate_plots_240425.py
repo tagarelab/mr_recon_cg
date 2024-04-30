@@ -12,7 +12,7 @@ import scipy as sp
 import matplotlib.pyplot as plt
 import visualization as vis
 
-data_name = 'Comb_Injected EMI Phase (rad)_Empty_04252024'
+data_name = 'Int_Comb_# of Injected EMI_Empty_04292024_1'
 data_file = sp.io.loadmat('sim_output/' + data_name + '.mat')
 
 # Load data
@@ -46,9 +46,9 @@ rmse_pro_img_std = np.std(rmse_pro_img, axis=0)
 
 # Plot RMSE with errorbar
 plt.figure()
-plt.errorbar(param1, rmse_org_freq_avg[:, 0], yerr=rmse_org_freq_std[:, 0], label='No Correction')
-plt.errorbar(param1, rmse_pro_freq_avg[:, 0], yerr=rmse_pro_freq_std[:, 0], label='Probe Corrected')
-plt.errorbar(param1, rmse_comb_freq_avg[:, 0], yerr=rmse_comb_freq_std[:, 0], label='Comb Corrected')
+plt.errorbar(param1, rmse_org_img_avg[:, 0], yerr=rmse_org_img_std[:, 0], label='No Correction')
+plt.errorbar(param1, rmse_pro_img_avg[:, 0], yerr=rmse_pro_img_std[:, 0], label='Probe Corrected')
+plt.errorbar(param1, rmse_comb_img_avg[:, 0], yerr=rmse_comb_img_std[:, 0], label='Comb Corrected')
 plt.xlabel(param1_name)
 plt.ylabel('RMSE')
 plt.title('RMSE vs ' + param1_name)
@@ -61,5 +61,5 @@ plt.errorbar(param1, pc_comb_avg[:, 0], yerr=pc_comb_std[:, 0])
 plt.xlabel(param1_name)
 plt.ylabel('% Residue')
 plt.title('Comb % Residue vs ' + param1_name)
-plt.ylim([0, 20])
+plt.ylim([0, 100])
 plt.show()
