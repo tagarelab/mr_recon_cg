@@ -140,7 +140,7 @@ def rand_sn_from_list(N_sn, amp_list, freq_list, phase_list):
     return sn
 
 
-def gen_sn(sn, length, dt):
+def gen_sn(sn, length, dt, bw=0):
     """
     Generate structured noise.
 
@@ -155,6 +155,8 @@ def gen_sn(sn, length, dt):
     noi_gen = np.zeros_like(tt, dtype=complex)
     for i in range(sn.shape[1]):
         noi_gen += sn[0, i] * np.exp(1j * (2 * np.pi * sn[1, i] * tt + sn[2, i]))
+        # Amplitude modulation
+        # noi_gen += sn[0, i] * np.exp(1j * (2 * np.pi * sn[1, i] * tt + sn[2, i])) * np.cos(bw * tt)
 
     return noi_gen
 
@@ -430,6 +432,7 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pr
     # Multi-loop Auto lambda
     if lambda_val == -1:
         lambda_val = auto_lambda(zfilled_data, rho)
+    # lambda_val = 20000
     while lambda_val > 0:
         emi_prdct = sn_recognition(signal=zfilled_data, mask=input_mask, lambda_val=lambda_val, stepsize=step, tol=tol,
                                    max_iter=max_iter,

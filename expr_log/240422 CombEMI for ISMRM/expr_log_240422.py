@@ -76,13 +76,14 @@ wgn_lin = 5  # linear power for Gaussian white noise
 # sn = np.array([[10, 300, 0]]).T  # amplitude and Hz for SN
 
 # Random Structured Noise
-N_sn = 10
+N_sn = 1
 amp_max = 100  # linear, not dB
 amp_min = 10
 amp_list = np.linspace(amp_min, amp_max, 10000)
 phase_list = np.linspace(-np.pi, np.pi, 100)
 
-sn = cs.rand_sn_from_list(N_sn, amp_list, freq_axis, phase_list)
+# sn = cs.rand_sn_from_list(N_sn, amp_list, freq_axis, phase_list)
+sn = np.array([[50, 285.7, 0]]).T  # amplitude and Hz for SN
 
 # Comb params
 lambda_val = -1  # regularization term
@@ -133,7 +134,7 @@ for k in range(N_rep):
     plt.show()
 
     # str_noi = cs.gen_sn(sim_noisy_sig, N_echoes, TE, dt, sn, polar_time)
-    str_noi = cs.gen_sn(sn=sn, length=len(sim_noisy_sig), dt=dt)
+    str_noi = cs.gen_sn(sn=sn, length=len(sim_noisy_sig), dt=dt, bw=0)
     sim_noisy_sig = sim_noisy_sig + str_noi
 
     # plt.figure()
