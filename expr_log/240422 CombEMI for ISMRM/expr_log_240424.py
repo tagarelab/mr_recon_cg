@@ -190,6 +190,9 @@ for i in range(N_param1):
             # cancelled_comb = cancelled_comb * factor
 
             cancelled_comb = cancelled_comb_raw[samp_mask_w_pol]
+
+            # cancelled_comb = cs.phase_shift_by_segments(cancelled_comb,int(TE/dt),np.angle(signal[::int(TE/dt)]))
+
             # vis.complex(cancelled_comb, name='Comb Output after masking', rect=True)
             # comb_scaling = 1.0099999999999991  # not related to lambda
             # cancelled_comb = cancelled_comb * comb_scaling

@@ -67,7 +67,7 @@ freq_axis = cs.freq_axis(int(np.ceil(N_echoes * TE / dt)), dt)  # Hz, frequency 
 # White noise
 # wgn_snr = 10  # snr for Gaussian white noise
 # wgn_db = 10  # power for Gaussian white noise
-wgn_lin = 5  # linear power for Gaussian white noise
+wgn_lin = 0  # linear power for Gaussian white noise
 
 # Pre-set structured noise
 # sn = np.array([[50, freq_axis[3408], 30]]).T  # amplitude and
@@ -83,7 +83,7 @@ amp_list = np.linspace(amp_min, amp_max, 10000)
 phase_list = np.linspace(-np.pi, np.pi, 100)
 
 # sn = cs.rand_sn_from_list(N_sn, amp_list, freq_axis, phase_list)
-sn = np.array([[50, 285.7, 0]]).T  # amplitude and Hz for SN
+sn = np.array([[50, 24601, 0]]).T  # amplitude and Hz for SN
 
 # Comb params
 lambda_val = -1  # regularization term
@@ -162,6 +162,10 @@ for k in range(N_rep):
     # cancelled_comb = cancelled_comb * factor
 
     cancelled_comb = cancelled_comb_raw[samp_mask_w_pol]
+
+    temp = signal
+    cancelled_comb = cs.phase_shift_by_segments(cancelled_comb, echo_len, temp[::echo_len])
+
     vis.complex(cancelled_comb, name='Comb Output after masking', rect=True)
     # comb_scaling = 1.0099999999999991  # not related to lambda
     # cancelled_comb = cancelled_comb * comb_scaling

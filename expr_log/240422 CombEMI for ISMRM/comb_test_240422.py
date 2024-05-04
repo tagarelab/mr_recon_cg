@@ -636,3 +636,24 @@ def remove_polarization(signal, time, dt):
 
 def calculate_polar_period(polar_time, dt):
     return int(np.ceil(polar_time / dt))
+
+
+def phase_shift_by_segments(x, t, shift_by):
+    """
+    Subtract the first t points by x[0], then the next t points by x[t], and so on.
+    """
+    # Ensure x is a numpy array
+    x = np.array(x)
+
+    # Calculate the number of segments
+    num_segments = len(x) // t
+
+    # Iterate over each segment
+    for i in range(num_segments):
+        x[i * t:(i + 1) * t] *= np.exp(1j * np.angle(shift_by[i]))
+
+    # # Handle the last segment if it has less than t points
+    # if len(x) % t != 0:
+    #     x[num_segments * t:] -= x[num_segments * t]
+
+    return x
