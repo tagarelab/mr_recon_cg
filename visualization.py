@@ -286,7 +286,7 @@ def absolute(signal, name=None, ylim=None):
         plt.ylim(ylim)
     if name is not None:
         plt.title(name)
-    plt.legend()
+    # plt.legend()
     plt.show()
 
 

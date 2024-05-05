@@ -74,14 +74,16 @@ wgn_lin = 5  # linear power for Gaussian white noise
 # Pre-set structured noise
 # sn = np.array([[10, 3846, 30], [13, -10086, 20]]).T  # amplitude and Hz and phase for SN
 # sn = np.array([[10, 3846, 84]]).T  # amplitude and Hz for SN
+
 sn_amp = 50
 sn_phase = 0
 sn_freq = 20000
 
 # Random Structured Noise
+ft_prtct = 15  # feature protection, 5 default for cartesian
 N_sn = 1
 amp_max = 100  # linear, not dB
-amp_min = 10
+amp_min = 20
 amp_list = np.linspace(amp_min, amp_max, 10000)
 phase_list = np.linspace(-np.pi, np.pi, 100)
 
@@ -96,11 +98,14 @@ post_drop = 0  # drop this many points at the end of each echo
 pk_win = 0.33  # the window size for above-white-noise peak, should be within (0,1)
 
 # Test params
-param1_name = "Injected Frequency (Hz)"
-param1 = freq_list[0::500]  # possible param1
+# param1_name = "Injected Frequency (Hz)"
+# param1 = freq_list[0::500]  # possible param1
 
 # param1_name = "Injected EMI Phase (rad)"
 # param1 = np.arange(-30, 30, 2) / 30 * np.pi  # possible param1
+
+param1_name = "Injected EMI Amplitude (a.u.)"
+param1 = np.arange(0, 50, 2)  # possible param1
 
 # param1_name = "# of Injected EMI"
 # param1 = np.arange(1, 11, 1, dtype=int)  # possible param1
@@ -121,9 +126,10 @@ rmse_pro_img = np.zeros((N_rep, N_param1, N_param2))
 pc_comb = np.zeros((N_rep, N_param1, N_param2))
 
 for i in range(N_param1):
-    sn_freq = param1[i]
+    # sn_freq = param1[i]
     # sn_phase = param1[i]
     # N_sn = param1[i]
+    sn_amp = param1[i]
 
     # Generate structured noise
     sn = np.array([[sn_amp, sn_freq, sn_phase]]).T  # amplitude and Hz and phase for SN
@@ -149,7 +155,7 @@ for i in range(N_param1):
 
             # img_fft = np.reshape(sim_noisy_sig, (N_echoes, -1))
             # plt.figure()
-            # plt.imshow(np.abs(freq2im(img_fft, theta=theta)), vmin=0, vmax=1)
+            # plt.imshow(np.abs(cs.freq2im(img_fft, theta=theta)), vmin=0, vmax=1)
             # plt.colorbar()
             #
             # sim_noisy_sig = sim_noisy_sig + np.random.normal(0, 10 ** (wgn_db / 20), sim_noisy_sig.shape) + \
@@ -184,15 +190,12 @@ for i in range(N_param1):
                                                    lambda_val=lambda_val,
                                                    step=step,
                                                    max_iter=max_iter, tol=0.1, pre_drop=pre_drop, post_drop=post_drop,
-                                                   pk_win=pk_win, polar_time=polar_time, rho=rho)
+                                                   pk_win=pk_win, polar_time=polar_time, rho=rho, ft_prtct=ft_prtct)
 
             # factor = np.abs(np.mean(np.abs(str_noi))/np.mean(np.abs(cancelled_comb)))
             # cancelled_comb = cancelled_comb * factor
 
             cancelled_comb = cancelled_comb_raw[samp_mask_w_pol]
-
-            # cancelled_comb = cs.phase_shift_by_segments(cancelled_comb,int(TE/dt),np.angle(signal[::int(TE/dt)]))
-
             # vis.complex(cancelled_comb, name='Comb Output after masking', rect=True)
             # comb_scaling = 1.0099999999999991  # not related to lambda
             # cancelled_comb = cancelled_comb * comb_scaling
@@ -203,12 +206,8 @@ for i in range(N_param1):
             probe = str_noi[samp_mask_w_pol] + cs.gen_white_noise(wgn_lin, signal.shape)
             signal_pro = signal - probe
 
-            # calculate difference
-            # signal_comb = signal - cancelled_comb
-
             # Generate imag
             sig_org = np.reshape(signal[cs.calculate_polar_period(polar_time=polar_time, dt=dt):], (N_echoes, -1))
-            # sig_comb = np.reshape(signal_comb, (-1, N_echoes))
             sig_pro = np.reshape(signal_pro[cs.calculate_polar_period(polar_time=polar_time, dt=dt):], (N_echoes, -1))
             noi_comb = np.reshape(cancelled_comb[cs.calculate_polar_period(polar_time=polar_time, dt=dt):],
                                   (N_echoes, -1))
@@ -230,92 +229,36 @@ for i in range(N_param1):
             rmse_comb_img[k, i, j] = cs.rmse(np.abs(phantom_img), np.abs(sig_comb_img))
             rmse_pro_img[k, i, j] = cs.rmse(np.abs(phantom_img), np.abs(sig_pro_img))
 
-    # Visualize
-    # plt.figure()
-    # plt.subplot(2, 2, 1)
-    # plt.imshow(np.abs(sig_org_img), vmin=0, vmax=1)
-    # plt.title('Orig, RMSE: ' + "{:.2f}".format(rmse_org_img[k]))
-    # plt.colorbar()
-    # plt.subplot(2, 2, 2)
-    # plt.imshow(np.abs(sig_comb_img), vmin=0, vmax=1)
-    # plt.title('Comb, RMSE: ' + "{:.2f}".format(rmse_comb_img[k]))
-    # plt.colorbar()
-    # plt.subplot(2, 2, 3)
-    # plt.imshow(np.abs(sig_pro_img), vmin=0, vmax=1)
-    # plt.title('Probe, RMSE: ' + "{:.2f}".format(rmse_pro_img[k]))
-    # plt.colorbar()
-    # plt.subplot(2, 2, 4)
-    # plt.imshow(np.abs(noi_comb_img), vmin=0, vmax=1)
-    # plt.title('Original-Comb')
-    # plt.colorbar()
-    # plt.show()
-    #
-    # plt.figure()
-    # plt.subplot(2, 2, 1)
-    # plt.imshow(np.abs(sig_org_img), vmin=0, vmax=1)
-    # plt.title('Original')
-    # plt.colorbar()
-    # plt.subplot(2, 2, 2)
-    # plt.imshow(np.abs(sig_comb_img), vmin=0, vmax=1)
-    # plt.title('Comb')
-    # plt.colorbar()
-    # plt.subplot(2, 2, 3)
-    # plt.imshow(np.abs(phantom_img), vmin=0, vmax=1)
-    # plt.title('Simulated Phantom')
-    # plt.colorbar()
-    # plt.subplot(2, 2, 4)
-    # plt.imshow(np.abs(sig_comb_img - phantom_img), vmin=0, vmax=1)
-    # plt.title('Comb-Phantom')
-    # plt.colorbar()
-    # plt.show()
-    #
-    # plt.figure()
-    # plt.subplot(2, 2, 1)
-    # plt.imshow(np.abs(sig_org))
-    # plt.title('Original')
-    # plt.colorbar()
-    # plt.subplot(2, 2, 2)
-    # plt.imshow(np.abs(sig_comb))
-    # plt.title('Comb')
-    # plt.colorbar()
-    # plt.subplot(2, 2, 3)
-    # plt.imshow(np.abs(sig_pro))
-    # plt.title('Probe')
-    # plt.colorbar()
-    # plt.subplot(2, 2, 4)
-    # plt.imshow(np.abs(noi_comb))
-    # plt.title('Original-Comb')
-    # plt.colorbar()
-    # plt.show()
+            # # Visualize
+            # plt.figure()
+            # plt.subplot(2, 2, 1)
+            # plt.imshow(np.abs(sig_org_img), vmin=0, vmax=1)
+            # plt.title('Orig, RMSE: ' + "{:.2f}".format(rmse_org_img[k, i, j]))
+            # plt.colorbar()
+            # plt.subplot(2, 2, 2)
+            # plt.imshow(np.abs(sig_comb_img), vmin=0, vmax=1)
+            # plt.title('Comb, RMSE: ' + "{:.2f}".format(rmse_comb_img[k, i, j]))
+            # plt.colorbar()
+            # plt.subplot(2, 2, 3)
+            # plt.imshow(np.abs(sig_pro_img), vmin=0, vmax=1)
+            # plt.title('Probe, RMSE: ' + "{:.2f}".format(rmse_pro_img[k, i, j]))
+            # plt.colorbar()
+            # plt.subplot(2, 2, 4)
+            # plt.imshow(np.abs(noi_comb_img), vmin=0, vmax=1)
+            # plt.title('Original-Comb')
+            # plt.colorbar()
+            # plt.show()
+            #
+            # vis.complex(cancelled_comb_raw, name='Comb Raw Output', rect=True)
+            # vis.freq_plot(cancelled_comb_raw, dt=1e-5, name='Comb Raw Output')
+            #
+            # vis.complex(str_noi, name='True EMI', rect=True)
+            # vis.freq_plot(str_noi, dt=1e-5, name='True EMI')
 
-    # Visualize 1D signal
-    # # Visualization of the first segment of 1D signal
-    # vis.freq_plot(sig_org[0, :], dt=1e-5, name='Simulated Signal')
-    # vis.freq_plot(str_noi[:echo_len], dt=1e-5, name='Simulated EMI')
-    # vis.freq_plot(noi_comb[0, :], dt=1e-5, name='Comb Estimated EMI')
-    # vis.complex(sig_org[0, :], name='Original Signal', rect=True)
-    # vis.complex(str_noi[:echo_len], name='Simulated EMI', rect=True)
-    # vis.complex(noi_comb[0, :], name='Comb Estimated EMI', rect=True)
-
-    # Difference
-    # factor = str_noi / cancelled_comb_raw
-    # vis.complex(factor, name='True EMI/ Comb output', rect=True)
-    # vis.complex(factor[samp_mask_w_pol], name='True EMI/ Comb output, masked', rect=True)
-    # vis.freq_plot(factor, dt=1e-5, name='True EMI/ Comb output')
-    #
-    # vis.complex(cancelled_comb_raw, name='Comb Raw Output', rect=True)
-    # vis.freq_plot(cancelled_comb_raw, dt=1e-5, name='Comb Raw Output')
-    #
-    # vis.complex(str_noi, name='True EMI', rect=True)
-    # vis.freq_plot(str_noi, dt=1e-5, name='True EMI')
-    # vis.freq_plot(str_noi-cancelled_comb_raw, dt=1e-5, name='True EMI - Comb Raw Output')
-    #
-    # vis.complex(signal, name='Signal', rect=True)
-    # vis.freq_plot(signal, dt=1e-5, name='Signal')
-
-mr_io.save_dict({'rmse_org_freq': rmse_org_freq, 'rmse_comb_freq': rmse_comb_freq, 'rmse_pro_freq': rmse_pro_freq,
-                 'rmse_org_img': rmse_org_img, 'rmse_comb_img': rmse_comb_img, 'rmse_pro_img': rmse_pro_img,
+mr_io.save_dict(
+    {'ft_prtct': ft_prtct, 'rmse_org_freq': rmse_org_freq, 'rmse_comb_freq': rmse_comb_freq, 'rmse_pro_freq':
+        rmse_pro_freq, 'rmse_org_img': rmse_org_img, 'rmse_comb_img': rmse_comb_img, 'rmse_pro_img': rmse_pro_img,
                  'pc_comb': pc_comb, 'param1': param1, 'param2': param2, 'param1_name': param1_name,
-                 'param2_name': param2_name}, name='Int_Comb_' + param1_name + '_' + param2_name,
+     'param2_name': param2_name}, name='Radon_Int_Comb_' + param1_name + '_' + param2_name,
                 path='sim_output/',
                 date=True, disp_msg=True)

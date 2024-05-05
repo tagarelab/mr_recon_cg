@@ -12,7 +12,7 @@ import scipy as sp
 import matplotlib.pyplot as plt
 import visualization as vis
 
-data_name = 'Int_Comb_Injected Frequency (Hz)_Empty_04302024'
+data_name = 'Radon_Int_Comb_Injected EMI Amplitude (a.u.)_Empty_05052024'
 data_file = sp.io.loadmat('sim_output/' + data_name + '.mat')
 
 # Load data

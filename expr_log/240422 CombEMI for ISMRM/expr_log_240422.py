@@ -67,7 +67,7 @@ freq_axis = cs.freq_axis(int(np.ceil(N_echoes * TE / dt)), dt)  # Hz, frequency 
 # White noise
 # wgn_snr = 10  # snr for Gaussian white noise
 # wgn_db = 10  # power for Gaussian white noise
-wgn_lin = 0  # linear power for Gaussian white noise
+wgn_lin = 5  # linear power for Gaussian white noise
 
 # Pre-set structured noise
 # sn = np.array([[50, freq_axis[3408], 30]]).T  # amplitude and
@@ -76,16 +76,18 @@ wgn_lin = 0  # linear power for Gaussian white noise
 # sn = np.array([[10, 300, 0]]).T  # amplitude and Hz for SN
 
 # Random Structured Noise
-N_sn = 1
-amp_max = 100  # linear, not dB
+N_sn = 5
+amp_max = 50  # linear, not dB
 amp_min = 10
 amp_list = np.linspace(amp_min, amp_max, 10000)
 phase_list = np.linspace(-np.pi, np.pi, 100)
 
-# sn = cs.rand_sn_from_list(N_sn, amp_list, freq_axis, phase_list)
-sn = np.array([[50, 24601, 0]]).T  # amplitude and Hz for SN
+sn = cs.rand_sn_from_list(N_sn, amp_list, freq_axis, phase_list)
+# sn = np.array([[50, 24601, 0]]).T  # amplitude and Hz for SN
+# sn[0] = 2
 
 # Comb params
+ft_prtct = 5  # feature protection
 lambda_val = -1  # regularization term
 rho = 1  # constant for the lagrange matrix, was 1.0 before
 step = 0.1  # step size
@@ -112,6 +114,9 @@ for k in range(N_rep):
     sim_noisy_sig = cs.sampled_to_full(signal=sim_noisy_sig, polar_time=polar_time, dt=dt, acq_len=echo_len,
                                        N_echoes=N_echoes,
                                        TE_len=np.uint16(TE / dt))
+
+    vis.absolute(sim_noisy_sig[4500:4800], name='Simulated Signal');
+
 
     samp_mask = cs.gen_samp_mask(acq_len=echo_len, N_echoes=N_echoes, TE_len=np.uint16(TE / dt),
                                  polar_time=polar_time, dt=dt, pol=False)
@@ -142,6 +147,13 @@ for k in range(N_rep):
     # plt.plot(np.imag(str_noi[:100]))
     # plt.title("Noise added")
 
+    # sim_noisy_sig_disp = sim_noisy_sig
+    # sim_noisy_sig_disp[samp_mask] = sim_noisy_sig[samp_mask]
+    # plt.plot(np.abs(sim_noisy_sig_disp[4500:4800]), label="abs")
+    # plt.plot(np.abs(sim_noisy_sig_disp[4500:4800]), label="abs")
+    # # plt.legend()
+    # plt.show()
+
     img_fft = np.reshape(sim_noisy_sig[samp_mask], (N_echoes, -1))
     plt.figure()
     plt.imshow(np.abs(cs.freq2im(img_fft, theta=theta)), vmin=0, vmax=1)
@@ -156,15 +168,12 @@ for k in range(N_rep):
     cancelled_comb_raw = cs.comb_optimized(signal=signal, N_echoes=N_echoes, TE=TE, dt=dt, lambda_val=lambda_val,
                                            step=step,
                                            max_iter=max_iter, tol=0.1, pre_drop=pre_drop, post_drop=post_drop,
-                                           pk_win=pk_win, polar_time=polar_time, rho=rho)
+                                           pk_win=pk_win, polar_time=polar_time, rho=rho, ft_prtct=ft_prtct)
 
     # factor = np.abs(np.mean(np.abs(str_noi))/np.mean(np.abs(cancelled_comb)))
     # cancelled_comb = cancelled_comb * factor
 
     cancelled_comb = cancelled_comb_raw[samp_mask_w_pol]
-
-    temp = signal
-    cancelled_comb = cs.phase_shift_by_segments(cancelled_comb, echo_len, temp[::echo_len])
 
     vis.complex(cancelled_comb, name='Comb Output after masking', rect=True)
     # comb_scaling = 1.0099999999999991  # not related to lambda
@@ -172,16 +181,10 @@ for k in range(N_rep):
 
     # perform simulated probe-based cancellation
     probe = str_noi[samp_mask_w_pol] + cs.gen_white_noise(wgn_lin, signal.shape)
-    # probe = str_noi[samp_mask_w_pol] + np.random.normal(0, 10 ** (wgn_db / 20), signal.shape) + \
-    #         1j * np.random.normal(0, 10 ** (wgn_db / 20), signal.shape[0])
     signal_pro = signal - probe
-
-    # calculate difference
-    # signal_comb = signal - cancelled_comb
 
     # Generate imag
     sig_org = np.reshape(signal[cs.calculate_polar_period(polar_time=polar_time, dt=dt):], (N_echoes, -1))
-    # sig_comb = np.reshape(signal_comb, (-1, N_echoes))
     sig_pro = np.reshape(signal_pro[cs.calculate_polar_period(polar_time=polar_time, dt=dt):], (N_echoes, -1))
     noi_comb = np.reshape(cancelled_comb[cs.calculate_polar_period(polar_time=polar_time, dt=dt):], (N_echoes, -1))
     sig_comb = sig_org - noi_comb

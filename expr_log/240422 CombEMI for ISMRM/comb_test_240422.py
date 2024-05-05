@@ -49,8 +49,8 @@ def im2freq(image, theta=np.arange(180)):
     Returns:
     - numpy.ndarray: The image in the frequency domain.
     """
-    return np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(image)))  # cartesian
-    # return radon_fft(image, theta)  # radon
+    # return np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(image)))  # cartesian
+    return radon_fft(image, theta)  # radon
 
 
 # This function is drafted by ChatGPT on 2023-12-16, edited and tested by the author.
@@ -64,8 +64,8 @@ def freq2im(frequency_data, theta=np.arange(180)):
     Returns:
     - numpy.ndarray: The reconstructed image.
     """
-    return np.fft.ifftshift(np.fft.ifft2(np.fft.fftshift(frequency_data)))  # cartesian
-    # return ifft_iradon(frequency_data, theta=theta) # radon
+    # return np.fft.ifftshift(np.fft.ifft2(np.fft.fftshift(frequency_data)))  # cartesian
+    return ifft_iradon(frequency_data, theta=theta)  # radon
 
 
 # This function is drafted by ChatGPT on 2023-12-16, edited and tested by the author.
@@ -318,7 +318,7 @@ def admm_l2_l1(A, b, x0, l1_wt=1.0, rho=1.0, iter_max=100, eps=1e-2):
 
 # %% Define comb_optimized: the noise cancellation function
 def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pre_drop, post_drop, pk_win,
-                   polar_time=0, rho=1.0):
+                   polar_time=0, rho=1.0, ft_prtct=5):
     """
     Comb noise self-correction method
 
@@ -353,16 +353,17 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pr
     # samp_all = np.tile(samp_1Echo, N_echoes)
 
     # Auto peak recognition to create comb
-    sig_len_hf = np.uint16((acq_len - pre_drop - post_drop) * pk_win / 2)
 
     # Pick out the peak location
-    pks = np.abs(np.reshape(signal_te, (N_echoes, -1)))
-    pks[:16, :] = 0  # some time there's a leak of signal at the beginning
-    pks_val, pks_id = np.max(pks, axis=0), np.argmax(pks, axis=0)
-    max_pks_id = np.argpartition(pks_val, -10)[-10:]
-    pk_id = np.uint16(np.mean(pks_id[max_pks_id]))
+    sig_len_hf = np.uint16((acq_len - pre_drop - post_drop) * pk_win / 2)
+    # pks = np.abs(np.reshape(signal_te, (N_echoes, -1)))
+    # pks[:16, :] = 0  # some time there's a leak of signal at the beginning
+    # pks_val, pks_id = np.max(pks, axis=0), np.argmax(pks, axis=0)
+    # max_pks_id = np.argpartition(pks_val, -10)[-10:]
+    # pk_id = np.uint16(np.mean(pks_id[max_pks_id]))
 
-    pk_id = sig_len_hf  # temp solution for debug
+    # temp solution due to no visible peak
+    pk_id = np.uint16((acq_len - pre_drop - post_drop) / 2)
 
     # Generate masks
     noi_all = gen_noi_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, dt)
@@ -426,12 +427,18 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pr
     # plt.title("Input Mask")
     # plt.show()
 
+    # plt.figure()
+    # plt.plot(np.abs(zfilled_data[4500:4800]), label="abs")
+    # plt.plot(np.abs(noi_all[4500:4800]*300), label="abs")
+    # # plt.legend()
+    # plt.show()
+
     # Predict the EMI
     emi_prdct_tot = np.zeros_like(zfilled_data)
 
     # Multi-loop Auto lambda
     if lambda_val == -1:
-        lambda_val = auto_lambda(zfilled_data, rho)
+        lambda_val = auto_lambda(zfilled_data, rho, ft_prtct=ft_prtct)
     # lambda_val = 20000
     while lambda_val > 0:
         emi_prdct = sn_recognition(signal=zfilled_data, mask=input_mask, lambda_val=lambda_val, stepsize=step, tol=tol,
@@ -439,7 +446,7 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pr
                                    method="conj_grad_l1_reg", rho=rho)
         emi_prdct_tot += emi_prdct
         zfilled_data[samp_all] = zfilled_data[samp_all] - emi_prdct[samp_all]
-        lambda_val = auto_lambda(zfilled_data, rho, lambda_default=lambda_val)
+        lambda_val = auto_lambda(zfilled_data, rho, lambda_default=lambda_val, ft_prtct=ft_prtct)
 
     # Single-loop Auto lambda
     # lambda_val = auto_lambda(zfilled_data, rho, lambda_default=99999999)
@@ -468,7 +475,7 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, step, tol, max_iter, pr
     return result
 
 
-def auto_lambda(signal, rho, lambda_default=np.inf, tol=0.4, cvg=0.95, ft_prtct=20):
+def auto_lambda(signal, rho, lambda_default=np.inf, tol=0.4, cvg=0.95, ft_prtct=5):
     """
     Automatically determine the lambda value for the signal.
 
