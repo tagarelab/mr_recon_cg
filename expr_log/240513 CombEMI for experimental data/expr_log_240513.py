@@ -21,7 +21,7 @@ ylim_freq = [-2.5e6, 2.5e6]
 
 # %% Load raw data
 mat_file = sp.io.loadmat('sim_input/Grad0Amp1.mat')
-raw_sig = mat_file['ch1']
+raw_sig = np.squeeze(mat_file['ch1'])
 
 vis.complex(raw_sig, name='Raw Signal', rect=True, ylim=ylim_time)
 N_echoes = 720
@@ -34,15 +34,15 @@ polar_time = 0
 
 max_iter = 100
 rho = 1
-lambda_val = 100  # -1 for auto regularization
+lambda_val = 10  # -1 for auto regularization
 # auto lambda parameters
-ft_prtct = 1000
+ft_prtct = 70
 echo_len = int(raw_sig.shape[0] / N_echoes)
 
 vis.complex(raw_sig[0:5000], name='Raw Signal', rect=True, ylim=ylim_time)
 
 # %% perform comb
-cancelled_comb_raw = cs.comb_optimized(signal=raw_sig.T, N_echoes=N_echoes, TE=TE, dt=dt, lambda_val=lambda_val,
+cancelled_comb_raw = cs.comb_optimized(signal=raw_sig, N_echoes=N_echoes, TE=TE, dt=dt, lambda_val=lambda_val,
                                        max_iter=max_iter, tol=0.1, pre_drop=pre_drop, post_drop=post_drop,
                                        pk_win=pk_win, polar_time=polar_time, rho=rho, ft_prtct=ft_prtct)
 
