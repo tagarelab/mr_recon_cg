@@ -489,8 +489,8 @@ def auto_lambda(signal, rho, lambda_default=np.inf, tol=0.4, cvg=0.95, ft_prtct=
     - bool: No need for another iteration
     """
     lambda_val = np.max(np.abs(np.fft.fft(signal))) / rho * tol
-    if lambda_val > np.mean(np.abs(np.fft.fft(signal))) / rho * ft_prtct and lambda_val < lambda_default * cvg:
-        print("Lower bound: ", np.mean(np.abs(np.fft.fft(signal))) / rho * ft_prtct)
+    if lambda_val > np.median(np.abs(np.fft.fft(signal))) / rho * ft_prtct and lambda_val < lambda_default * cvg:
+        print("Lower bound: ", np.median(np.abs(np.fft.fft(signal))) / rho * ft_prtct)
         print("Auto lambda: ", lambda_val)
         return lambda_val
     return -1
