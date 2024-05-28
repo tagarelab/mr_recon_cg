@@ -82,13 +82,14 @@ class TestAlgebra(unittest.TestCase):
         z_coord = np.tile(np.arange(3), 9)
 
         # Use vec2mesh to transform them into a 3D mesh
-        mag_mesh, X_M, Y_M, Z_M = algebra.vec2mesh(mag, x_coord, y_coord, z_coord, 3, 3, 3)
+        # mag_mesh, x_M, y_M, z_M = algebra.vec2mesh(mag, x_coord, y_coord, z_coord, 3, 3, 3)
+        mag_mesh, x_M, y_M, z_M = algebra.vec2mesh(mag, x_coord, y_coord, z_coord)
 
         # Check if the output dimensions are correct
         assert mag_mesh.shape == (3, 3, 3)
-        assert X_M.shape == (3, 3, 3)
-        assert Y_M.shape == (3, 3, 3)
-        assert Z_M.shape == (3, 3, 3)
+        assert x_M.shape == (3,)
+        assert y_M.shape == (3,)
+        assert z_M.shape == (3,)
 
         # Check if the values at certain indices match the expected values
         assert mag_mesh[0, 0, 0] == 0

@@ -75,19 +75,38 @@ def interp_3dmat(M, x_axis, y_axis, z_axis, x_pts, y_pts, z_pts, method='linear'
     return interpolated_matrix, x_intrp, y_intrp, z_intrp
 
 
-def vec2mesh(mag, x_coord, y_coord, z_coord, x_dim, y_dim, z_dim):
+def vec2mesh(mag, x_coord, y_coord, z_coord, x_dim=None, y_dim=None, z_dim=None, empty_val=None):
     """
     Transform from vector representation to mesh representation,
     assuming even interpolation.
     This function is adapted from a MATLAB function by Github Copilot and edited & tested by the author.
 
     """
-    if len(mag) != x_dim * y_dim * z_dim:
-        raise ValueError('Error: target dimensions does not meet vector dimension.')
+    if x_dim is not None:
+        x_M = np.linspace(np.min(x_coord), np.max(x_coord), x_dim)
+    else:
+        x_M = np.unique(x_coord)
+        x_dim = len(x_M)
+    if y_dim is not None:
+        y_M = np.linspace(np.min(y_coord), np.max(y_coord), y_dim)
+    else:
+        y_M = np.unique(y_coord)
+        y_dim = len(y_M)
+    if z_dim is not None:
+        z_M = np.linspace(np.min(z_coord), np.max(z_coord), z_dim)
+    else:
+        z_M = np.unique(z_coord)
+        z_dim = len(z_M)
 
-    x_M = np.linspace(np.min(x_coord), np.max(x_coord), x_dim)
-    y_M = np.linspace(np.min(y_coord), np.max(y_coord), y_dim)
-    z_M = np.linspace(np.min(z_coord), np.max(z_coord), z_dim)
+    if mag.ndim == 1:
+        mag = np.expand_dims(mag, axis=0)
+    if mag.shape[1] != x_dim * y_dim * z_dim:
+        if empty_val is None:
+            raise ValueError('Error: target dimensions does not meet vector dimension.')
+        else:
+            print(
+                'Warning in vec2mesh: target dimensions does not meet vector dimension. Filling with empty_val: ' + empty_val)
+
     X_M, Y_M, Z_M = np.meshgrid(x_M, y_M, z_M, indexing='ij')
 
     mag_mesh = np.zeros((x_dim, y_dim, z_dim))
@@ -96,7 +115,11 @@ def vec2mesh(mag, x_coord, y_coord, z_coord, x_dim, y_dim, z_dim):
             for zz in range(z_dim):
                 ind = np.argmax((x_coord == X_M[xx, yy, zz]) & (y_coord == Y_M[xx, yy, zz]) & (z_coord == Z_M[xx, yy,
                 zz]))
-                mag_mesh[xx, yy, zz] = mag[ind]
+                try:
+                    mag_mesh[xx, yy, zz] = mag[ind]
+                except ValueError:
+                    print('ValueError: ', ind)
+                    mag_mesh[xx, yy, zz] = empty_val
 
     return mag_mesh, x_M, y_M, z_M
 
