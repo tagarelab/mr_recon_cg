@@ -37,8 +37,8 @@ def scan_2_mat(loc=None, interleave=None, N_ch=None, rep=None, name=None, seg=No
     seg_len = int(ch_len / seg)
 
     print('Output matrix size per channel:\n repetition axis: {0:d}, data axis: {1:d}\n'.format(rep * seg, seg_len))
-    proceed = input('Proceed to saving (y/n)?')
-    if proceed == 'y':
+    proceed = input('Proceed to saving (yes/no)?')
+    if proceed == 'yes':
         data_mat = np.zeros((seg_len, rep * seg, N_ch), dtype='complex')
 
         if rep == 1:
@@ -60,6 +60,8 @@ def scan_2_mat(loc=None, interleave=None, N_ch=None, rep=None, name=None, seg=No
             mdic['ch' + str(j + 1)] = data_mat[:, :, j]
         mr_io.save_dict(mdic, name=name, path=loc, date=False)
 
+    else:
+        print('Data not saved.')
 
 def get_ch_len(data, N_ch):
     """
