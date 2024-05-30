@@ -14,7 +14,7 @@ import scipy as sp
 import matplotlib.pyplot as plt
 from skimage.transform import radon, iradon
 
-import visualization
+import visualization as vis
 from optlib import c_grad as cg
 from optlib import operators as op
 
@@ -434,20 +434,28 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop
     # plt.legend()
     plt.show()
 
+    vis.freq_plot(np.where(samp_all, zfilled_data, 0), dt=dt, name='Raw Signal (without Comb Shaped Mask)')
+    vis.freq_plot(np.where(noi_all, zfilled_data, 0), dt=dt, name='Comb input')
+
     # Predict the EMI
     emi_prdct_tot = np.zeros_like(zfilled_data)
 
     # Multi-loop Auto lambda
     if lambda_val == -1:
-        lambda_val = auto_lambda(zfilled_data, rho, ft_prtct=ft_prtct)
-    # lambda_val = 20000
+        # lambda_val = auto_lambda(zfilled_data, rho, ft_prtct=ft_prtct)
+        lambda_val = auto_lambda(np.where(noi_all, zfilled_data, 0), rho, ft_prtct=ft_prtct)
     while lambda_val > 0:
         emi_prdct = sn_recognition(signal=zfilled_data, mask=input_mask, lambda_val=lambda_val, tol=tol,
                                    max_iter=max_iter,
                                    method="conj_grad_l1_reg", rho=rho)
+        vis.freq_plot(emi_prdct, dt=dt, name='EMI pred lambda = %10.3E' % lambda_val)
         emi_prdct_tot += emi_prdct
         zfilled_data[samp_all] = zfilled_data[samp_all] - emi_prdct[samp_all]
-        lambda_val = auto_lambda(zfilled_data, rho, lambda_default=lambda_val, ft_prtct=ft_prtct)
+        vis.freq_plot(np.where(samp_all, zfilled_data, 0), dt=dt, name='Raw Signal (without Comb Shaped Mask)')
+        vis.freq_plot(np.where(noi_all, zfilled_data, 0), dt=dt, name='Comb input')
+        # lambda_val = auto_lambda(zfilled_data, rho, lambda_default=lambda_val, ft_prtct=ft_prtct)
+        lambda_val = auto_lambda(np.where(noi_all, zfilled_data, 0), rho, lambda_default=lambda_val,
+                                 ft_prtct=ft_prtct)
 
     # Single-loop Auto lambda
     # lambda_val = auto_lambda(zfilled_data, rho, lambda_default=99999999)
@@ -476,7 +484,7 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop
     return result
 
 
-def auto_lambda(signal, rho, lambda_default=np.inf, tol=0.4, cvg=0.95, ft_prtct=5):
+def auto_lambda(signal, rho, lambda_default=np.inf, tol=None, cvg=0.99, ft_prtct=5):
     """
     Automatically determine the lambda value for the signal.
 
@@ -488,11 +496,19 @@ def auto_lambda(signal, rho, lambda_default=np.inf, tol=0.4, cvg=0.95, ft_prtct=
     - float: The lambda value.
     - bool: No need for another iteration
     """
-    lambda_val = np.max(np.abs(np.fft.fft(signal))) / rho * tol
-    if lambda_val > np.median(np.abs(np.fft.fft(signal))) / rho * ft_prtct and lambda_val < lambda_default * cvg:
-        print("Lower bound: ", np.median(np.abs(np.fft.fft(signal))) / rho * ft_prtct)
+    if tol is None:
+        tol = [0.6, 0.6]
+
+    lambda_val = np.max(np.abs(np.fft.fft(signal))) * rho * tol[0]
+    lower_bound = np.median(np.abs(np.fft.fft(signal))) * rho * ft_prtct
+    if lambda_val > lower_bound and lambda_val < lambda_default * cvg:
+        # if lambda_val > lower_bound:
+        print("Lower bound: ", lower_bound)
         print("Auto lambda: ", lambda_val)
         return lambda_val
+    # elif lambda_val/tol[0]*tol[1] > lower_bound:
+    #     print("Auto lambda set to lower bound: ", lower_bound)
+    #     return lower_bound
     return -1
 
 

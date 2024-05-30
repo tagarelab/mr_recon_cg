@@ -12,7 +12,7 @@
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
-import comb_test_240513 as cs
+import comb_test_240528 as cs
 import visualization as vis
 
 # plot data
@@ -34,9 +34,9 @@ polar_time = 0
 
 max_iter = 100
 rho = 1
-lambda_val = 10  # -1 for auto regularization
+lambda_val = -1  # -1 for auto regularization
 # auto lambda parameters
-ft_prtct = 70
+ft_prtct = 10
 echo_len = int(raw_sig.shape[0] / N_echoes)
 
 vis.complex(raw_sig[0:5000], name='Raw Signal', rect=True, ylim=ylim_time)
@@ -50,10 +50,9 @@ samp_mask_w_pol = cs.gen_samp_mask(acq_len=echo_len, N_echoes=N_echoes, TE_len=n
                                    polar_time=polar_time, dt=dt, pol=True)
 cancelled_comb = cancelled_comb_raw[samp_mask_w_pol]
 
-vis.complex(cancelled_comb, name='Comb Raw Output', rect=True, ylim=ylim_time)
-vis.complex(cancelled_comb[0:5000], name='Comb Raw Output', rect=True, ylim=ylim_time)
-
-vis.freq_plot(cancelled_comb, dt=dt, name='Comb Raw Output')
+vis.complex(cancelled_comb_raw, name='Comb Raw Output', rect=True, ylim=ylim_time)
+vis.complex(cancelled_comb_raw[0:5000], name='Comb Raw Output', rect=True, ylim=ylim_time)
+vis.freq_plot(cancelled_comb_raw, dt=dt, name='Comb Raw Output')
 
 comb = np.squeeze(raw_sig) - cancelled_comb
 

@@ -7,10 +7,8 @@
 """
 
 import numpy as np
-import scipy as sp
-
-import numpy as np
 from scipy.interpolate import RegularGridInterpolator
+import warnings
 
 
 def rot_mat(u, theta):
@@ -104,22 +102,26 @@ def vec2mesh(mag, x_coord, y_coord, z_coord, x_dim=None, y_dim=None, z_dim=None,
         if empty_val is None:
             raise ValueError('Error: target dimensions does not meet vector dimension.')
         else:
-            print(
-                'Warning in vec2mesh: target dimensions does not meet vector dimension. Filling with empty_val: ' + empty_val)
+            warnings.warn("Warning: target dimensions does not meet vector dimension. Filling with empty_val: %.2f"
+                          % empty_val)
 
     X_M, Y_M, Z_M = np.meshgrid(x_M, y_M, z_M, indexing='ij')
 
-    mag_mesh = np.zeros((x_dim, y_dim, z_dim))
-    for xx in range(x_dim):
-        for yy in range(y_dim):
-            for zz in range(z_dim):
-                ind = np.argmax((x_coord == X_M[xx, yy, zz]) & (y_coord == Y_M[xx, yy, zz]) & (z_coord == Z_M[xx, yy,
-                zz]))
-                try:
-                    mag_mesh[xx, yy, zz] = mag[ind]
-                except ValueError:
-                    print('ValueError: ', ind)
-                    mag_mesh[xx, yy, zz] = empty_val
+    mag_mesh = np.zeros((mag.shape[0], x_dim, y_dim, z_dim))
+    for dd in range(mag.shape[0]):
+        for xx in range(x_dim):
+            for yy in range(y_dim):
+                for zz in range(z_dim):
+                    ind = np.argmax(
+                        (x_coord == X_M[xx, yy, zz]) & (y_coord == Y_M[xx, yy, zz]) & (z_coord == Z_M[xx, yy,
+                        zz]))
+                    try:
+                        mag_mesh[dd, xx, yy, zz] = mag[dd, ind]
+                    except ValueError:
+                        print('ValueError: ', ind)
+                        mag_mesh[dd, xx, yy, zz] = empty_val
+    if mag.shape[0] == 1:
+        mag_mesh = np.squeeze(mag_mesh, axis=0)
 
     return mag_mesh, x_M, y_M, z_M
 

@@ -44,15 +44,17 @@ B1_data = mr_io.load_single_mat(name=filename, path=path)['B1'] * 1e3
 B1_coords = mr_io.load_single_mat(name='glr_plane_field_coords', path=path)['field_coords'] * 1e3
 B1_data_raw = mr_io.load_single_mat(name='glr_plane_field_strength', path=path)['field_strength']
 
-B1_data_x, x_b1_raw, y_b1_raw, z_b1_raw = algb.vec2mesh(B1_data_raw[0, :], B1_coords[0, :], B1_coords[1, :],
+B1_data, x_b1_raw, y_b1_raw, z_b1_raw = algb.vec2mesh(B1_data_raw, B1_coords[0, :], B1_coords[1, :],
                                                         B1_coords[2, :], empty_val=0)
 
-vis.scatter3d(x_b1_raw, y_b1_raw, z_b1_raw, grad=B1_data_x, title='B1 raw', xlim=xlim, ylim=ylim, zlim=zlim)
+vis.scatter3d(x_b1_raw, y_b1_raw, z_b1_raw, grad=np.linalg.norm(B1_data, axis=0), title='B1 raw', xlim=xlim, ylim=ylim,
+              zlim=zlim)
+vis.scatter3d(x_b1_raw, y_b1_raw, z_b1_raw, grad=np.linalg.norm(B1_data, axis=0), title='B1 raw')
 
 # Create a 3D grid for the magnetic field data
-x_b1_raw = np.linspace(-120, +120, B1_data.shape[1])
-y_b1_raw = np.linspace(-120, +120, B1_data.shape[2])
-z_b1_raw = np.linspace(-120, +120, B1_data.shape[3])
+# x_b1_raw = np.linspace(-120, +120, B1_data.shape[1])
+# y_b1_raw = np.linspace(-120, +120, B1_data.shape[2])
+# z_b1_raw = np.linspace(-120, +120, B1_data.shape[3])
 
 B1_x = algb.interp_by_pts(current_grad * B1_data[0, :, :, :], x_b1_raw, y_b1_raw, z_b1_raw, intrp_pts, method='linear')
 B1_y = algb.interp_by_pts(current_grad * B1_data[1, :, :, :], x_b1_raw, y_b1_raw, z_b1_raw, intrp_pts, method='linear')
