@@ -319,7 +319,8 @@ def admm_l2_l1(A, b, x0, l1_wt=1.0, rho=1.0, iter_max=100, eps=1e-2):
 
 # %% Define comb_optimized: the noise cancellation function
 def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop, post_drop, pk_win,
-                   pk_id=None, polar_time=0, rho=1.0, ft_prtct=5):
+                   pk_id=None, polar_time=0, rho=1.0, ft_prtct=5, Disp_Intermediate=False,
+                   ylim_time=None, ylim_freq=None):
     """
     Comb noise self-correction method
 
@@ -430,14 +431,17 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop
     # plt.title("Input Mask")
     # plt.show()
 
-    plt.figure()
-    plt.plot(np.abs(zfilled_data[4000:5000]), label="abs")
-    plt.plot(np.abs(noi_all[4000:5000] * 100000), label="abs")
-    # plt.legend()
-    plt.show()
+    if Disp_Intermediate:
+        plt.figure()
+        plt.plot(np.abs(zfilled_data[4000:5000]), label="abs")
+        plt.plot(np.abs(noi_all[4000:5000] * 100000), label="abs")
+        # plt.legend()
+        plt.show()
 
-    vis.freq_plot(np.where(samp_all, zfilled_data, 0), dt=dt, name='Raw Signal (without Comb Shaped Mask)')
-    vis.freq_plot(np.where(noi_all, zfilled_data, 0), dt=dt, name='Comb input')
+        vis.freq_plot(np.where(samp_all, zfilled_data, 0), dt=dt, name='Raw Signal (without Comb Shaped Mask)',
+                      ylim=ylim_freq)
+        vis.freq_plot(np.where(noi_all, zfilled_data, 0), dt=dt, name='Comb input',
+                      ylim=ylim_freq)
 
     # Predict the EMI
     emi_prdct_tot = np.zeros_like(zfilled_data)
@@ -445,17 +449,21 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop
     # Multi-loop Auto lambda
     if lambda_val == -1:
         # lambda_val = auto_lambda(zfilled_data, rho, ft_prtct=ft_prtct)
-        lambda_val = auto_lambda(np.where(noi_all, zfilled_data, 0), rho, ft_prtct=ft_prtct)
+        lambda_val = auto_lambda(np.where(noi_all, zfilled_data, 0), rho, ft_prtct=ft_prtct,
+                                 Disp_Intermediate=Disp_Intermediate)
     while lambda_val > 0:
         emi_prdct = sn_recognition(signal=zfilled_data, mask=input_mask, lambda_val=lambda_val, tol=tol,
                                    max_iter=max_iter,
                                    method="conj_grad_l1_reg", rho=rho)
-        vis.freq_plot(emi_prdct, dt=dt, name='EMI pred lambda = %10.3E' % lambda_val)
+        if Disp_Intermediate:
+            vis.freq_plot(emi_prdct, dt=dt, name='EMI pred lambda = %10.3E' % lambda_val)
         emi_prdct_tot += emi_prdct
         zfilled_data[samp_all] = zfilled_data[samp_all] - emi_prdct[samp_all]
-        vis.freq_plot(np.where(samp_all, zfilled_data, 0), dt=dt, name='Raw Signal (without Comb Shaped Mask)')
-        vis.freq_plot(np.where(noi_all, zfilled_data, 0), dt=dt, name='Comb input')
-        # lambda_val = auto_lambda(zfilled_data, rho, lambda_default=lambda_val, ft_prtct=ft_prtct)
+        if Disp_Intermediate:
+            vis.freq_plot(np.where(samp_all, zfilled_data, 0), dt=dt, name='Raw Signal (without Comb Shaped Mask)',
+                          ylim=ylim_freq)
+            vis.freq_plot(np.where(noi_all, zfilled_data, 0), dt=dt, name='Comb input',
+                          ylim=ylim_freq)
         lambda_val = auto_lambda(np.where(noi_all, zfilled_data, 0), rho, lambda_default=lambda_val,
                                  ft_prtct=ft_prtct)
 
@@ -486,7 +494,7 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop
     return result
 
 
-def auto_lambda(signal, rho, lambda_default=np.inf, tol=None, cvg=0.99, ft_prtct=5):
+def auto_lambda(signal, rho, lambda_default=np.inf, tol=None, cvg=0.99, ft_prtct=5, Disp_Intermediate=None):
     """
     Automatically determine the lambda value for the signal.
 
@@ -505,8 +513,9 @@ def auto_lambda(signal, rho, lambda_default=np.inf, tol=None, cvg=0.99, ft_prtct
     lower_bound = np.median(np.abs(np.fft.fft(signal))) * rho * ft_prtct
     if lambda_val > lower_bound and lambda_val < lambda_default * cvg:
         # if lambda_val > lower_bound:
-        print("Lower bound: ", lower_bound)
-        print("Auto lambda: ", lambda_val)
+        if Disp_Intermediate:
+            print("Lower bound: ", lower_bound)
+            print("Auto lambda: ", lambda_val)
         return lambda_val
     # elif lambda_val/tol[0]*tol[1] > lower_bound:
     #     print("Auto lambda set to lower bound: ", lower_bound)
@@ -590,7 +599,7 @@ def sn_recognition(signal, mask, lambda_val, tol=0.1, max_iter=100, method="conj
 
         H = op.hadamard_op(np.abs(sn_prdct) > 1e-1 * np.max(np.abs(sn_prdct)))
         A = op.composite_op(S, F, H)
-        sn_prdct, cg_flag = cg.solve_lin_cg(y, A, sn_prdct, B=op.scalar_prod_op(0.05), max_iter=1)
+        sn_prdct, cg_flag = cg.solve_lin_cg(y, A, sn_prdct, B=op.scalar_prod_op(0.05), max_iter=10)
 
         # if not cg_flag:
         #     print("Step limit reached at CG for amplitude.")

@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import cm
 from scipy import fft, optimize
+import warnings
 import algebra
 
 __all__ = ['quiver3d', 'scatter3d']
@@ -137,6 +138,14 @@ def imshow(image, name=None):
 
 
 def snr_tradeoff_compare(sig_1, sig_2, noi_range=None, sig_1_name="Signal 1", sig_2_name="Signal 2"):
+    if sig_1.ndim == 2:
+        sig_1 = np.expand_dims(sig_1, axis=2)  # add channel dimension
+    if sig_2.ndim == 2:
+        sig_2 = np.expand_dims(sig_2, axis=2)  # add channel dimension
+
+    if sig_1.shape != sig_2.shape:
+        raise ValueError('Error: signal shapes do not match.')
+
     N_rep = sig_1.shape[1]
     N_sig_ch = sig_1.shape[2]
     snr_1 = np.zeros((N_rep, N_sig_ch))
@@ -148,7 +157,7 @@ def snr_tradeoff_compare(sig_1, sig_2, noi_range=None, sig_1_name="Signal 1", si
             snr_2[i, k] = algebra.snr(sig_2[:, :i, k], noi_range)
 
     if N_rep == 1:
-        print('Only one repetition is entered. SNR tradeoff not plotted.')
+        warnings.warn('Only one repetition is entered. SNR tradeoff not plotted.')
     else:
         xaxis_temp = np.arange(N_rep) + 1
         for k in range(N_sig_ch):
@@ -159,6 +168,10 @@ def snr_tradeoff_compare(sig_1, sig_2, noi_range=None, sig_1_name="Signal 1", si
             plt.title('SNR trade-off with # of Averages in ch' + str(k))
             plt.legend()
             plt.show()
+
+    if N_sig_ch == 1:
+        snr_1 = np.squeeze(snr_1)
+        snr_2 = np.squeeze(snr_2)
 
     return snr_1, snr_2
 

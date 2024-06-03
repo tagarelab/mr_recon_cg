@@ -155,9 +155,12 @@ def array2complex(x):
 
 
 def snr(signal, noi_range=None):
-    sig_mean = np.abs(np.mean(signal, axis=1))
+    if signal.ndim == 2:
+        signal = np.mean(signal, axis=1)
+    sig_abs = np.abs(signal)
     if noi_range is None:
-        noi_range = [0, len(sig_mean)]
-    sig_std = np.std(sig_mean[noi_range[0]:noi_range[1]])
-    noi_avg = np.mean(sig_mean[noi_range[0]:noi_range[1]])  # take off the noise floor when calculating SNR
-    return (np.max(sig_mean) - noi_avg) / sig_std
+        warnings.warn("Warning when calculating snr: Noise range is not specified. Using the whole signal.")
+        noi_range = [0, len(sig_abs)]
+    noi_std = np.std(sig_abs[noi_range[0]:noi_range[1]])
+    noi_avg = np.mean(sig_abs[noi_range[0]:noi_range[1]])  # take off the noise floor when calculating SNR
+    return (np.max(sig_abs) - noi_avg) / noi_std
