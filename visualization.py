@@ -246,8 +246,10 @@ def freq_plot(signal, dt, name=None, ylim=None):
     plot_against_frequency(signal_ft, length, dt, name, ylim)
 
 
-def repetitions(signal, name=None):
-    im = plt.imshow(abs(signal), cmap=cm.coolwarm, interpolation='nearest', vmin=0, vmax=0.5e6,
+def repetitions(signal, name=None, ylim=None):
+    if ylim is None:
+        ylim = [0, signal.max()]
+    im = plt.imshow(signal, cmap=cm.coolwarm, interpolation='nearest', vmin=ylim[0], vmax=ylim[1],
                     aspect='auto')
     plt.colorbar(im)
 
