@@ -17,7 +17,7 @@ import visualization as vis
 ylim_time = [-15000, 15000]
 ylim_freq = [-3e5, 3e5]
 ylim_freq_zfilled = [-1e8, 1e8]
-Disp_Intermediate = False
+Disp_Intermediate = True
 
 
 # %% support functions
@@ -30,9 +30,10 @@ def avg_first_k_peaks(signal, echo_len, k=10):
 
 
 # %% Load raw data
-file_name = 'WithRO_16Scans'
+file_name = 'NoRO_16Scans'
 mat_file = sp.io.loadmat('sim_input/' + file_name + '.mat')
-raw_sig_all = mat_file['ch1'][1100:, :]  # the first 1000 points are polarization period
+raw_sig_all = mat_file['ch1']
+raw_sig_all = raw_sig_all[1100:, :]
 comb_sig_all = np.zeros(raw_sig_all.shape, dtype='complex')
 
 # %% Data parameters
@@ -43,19 +44,25 @@ pre_drop = 0
 post_drop = 0
 pk_win = 0.33
 pk_id = None  # None for auto peak detection
-polar_time = 0
+polar_period = 0
+polar_time = dt * polar_period
+post_polar_gap_time = 0
+
+# polar_period = 1000
+# polar_time = dt*polar_period  # 1000 points for polarization
+# post_polar_gap_time = 200e-6+35e-3+100e-3+20e-6+80e-6   # maybe also add half of the 90 degree pulse length?
 
 max_iter = 200
 rho = 1
 lambda_val = -1  # -1 for auto regularization
 # auto lambda parameters
 ft_prtct = 20
-echo_len = int(raw_sig_all.shape[0] / N_echoes)
+echo_len = int((raw_sig_all.shape[0] - polar_period) / N_echoes)
 
 # %% Process data
 
-for i in range(raw_sig_all.shape[1]):
-    # for i in [0]:
+# for i in range(raw_sig_all.shape[1]):
+for i in [0]:
     print('Processing Repetition #', i, " out of ", raw_sig_all.shape[1])
 
     raw_sig = np.squeeze(raw_sig_all[:, i])
@@ -67,12 +74,13 @@ for i in range(raw_sig_all.shape[1]):
     # %% perform comb
     cancelled_comb_raw = cs.comb_optimized(signal=raw_sig, N_echoes=N_echoes, TE=TE, dt=dt, lambda_val=lambda_val,
                                            max_iter=max_iter, tol=0.1, pre_drop=pre_drop, post_drop=post_drop,
-                                           pk_win=pk_win, pk_id=pk_id, polar_time=polar_time, rho=rho,
+                                           pk_win=pk_win, pk_id=pk_id,
+                                           polar_time=polar_time, post_polar_gap_time=post_polar_gap_time, rho=rho,
                                            ft_prtct=ft_prtct, Disp_Intermediate=Disp_Intermediate,
                                            ylim_time=ylim_time, ylim_freq=ylim_freq_zfilled)
 
     samp_mask_w_pol = cs.gen_samp_mask(acq_len=echo_len, N_echoes=N_echoes, TE_len=np.uint16(TE / dt),
-                                       polar_time=polar_time, dt=dt, pol=True)
+                                       polar_time=polar_time, post_polar_gap_time=post_polar_gap_time, dt=dt, pol=True)
     cancelled_comb = cancelled_comb_raw[samp_mask_w_pol]
 
     if Disp_Intermediate:
@@ -84,15 +92,16 @@ for i in range(raw_sig_all.shape[1]):
 
     if Disp_Intermediate:
         vis.complex(comb, name='Comb Cancelled Result', rect=True, ylim=ylim_time)
-        vis.complex(comb[0:400], name='Comb Cancelled Result', rect=True, ylim=ylim_time)
+        vis.complex(comb[polar_period:polar_period + 400], name='Comb Cancelled Result', rect=True, ylim=ylim_time)
 
-        vis.freq_plot(raw_sig[0:echo_len], dt=dt, name='Raw Sig', ylim=ylim_freq)
-        vis.freq_plot(comb[0:echo_len], dt=dt, name='Comb Cancelled Result', ylim=ylim_freq)
+        vis.freq_plot(raw_sig[polar_period:polar_period + echo_len], dt=dt, name='Raw Sig', ylim=ylim_freq)
+        vis.freq_plot(comb[polar_period:polar_period + echo_len], dt=dt, name='Comb Cancelled Result', ylim=ylim_freq)
 
         k = 10
-        vis.freq_plot(avg_first_k_peaks(raw_sig, echo_len, k=k), dt=dt, name="Raw Sig, Avg of First %d Peaks" % k,
+        vis.freq_plot(avg_first_k_peaks(raw_sig[polar_period:], echo_len, k=k), dt=dt,
+                      name="Raw Sig, Avg of First %d Peaks" % k,
                       ylim=ylim_freq)
-        vis.freq_plot(avg_first_k_peaks(comb, echo_len, k=k), dt=dt,
+        vis.freq_plot(avg_first_k_peaks(comb[polar_period:], echo_len, k=k), dt=dt,
                       name="Comb Cancelled Result, Avg of First %d Peaks" % k,
                       ylim=ylim_freq)
     comb_sig_all[:, i] = comb

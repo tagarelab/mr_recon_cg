@@ -406,7 +406,7 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop
     # # add polarization time
     # zfilled_data = np.concatenate([signal_pol, zfilled_data], axis=1)
 
-    zfilled_data = sampled_to_full(signal, polar_time, dt, acq_len, N_echoes, TE_len)
+    zfilled_data = sampled_to_full(signal, polar_time, post_polar_gap_time, dt, acq_len, N_echoes, TE_len)
     # visualization.complex(zfilled_data, name="zfilled_data")
 
     # masked data
@@ -423,19 +423,16 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop
     # plt.legend()
     # plt.show()
 
-    pol_mask = gen_pol_mask(N_echoes, TE_len, polar_time, dt)
-    all_ones_mask = np.ones_like(samp_all)
+    # pol_mask = gen_pol_mask(N_echoes, TE_len, polar_time,post_polar_gap_time, dt)
+    # all_ones_mask = np.ones_like(samp_all)
 
     input_mask = noi_all
-    # plt.figure()
-    # plt.plot(np.abs(input_mask))
-    # plt.title("Input Mask")
-    # plt.show()
 
     if Disp_Intermediate:
+        vis_region = [0 + polar_period + post_polar_gap_period, 1000 + polar_period + post_polar_gap_period]
         plt.figure()
-        plt.plot(np.abs(zfilled_data[4000:5000]), label="abs")
-        plt.plot(np.abs(noi_all[4000:5000] * 100000), label="abs")
+        plt.plot(np.abs(zfilled_data[vis_region[0]:vis_region[1]]), label="abs")
+        plt.plot(np.abs(noi_all[vis_region[0]:vis_region[1]] * 100000), label="abs")
         # plt.legend()
         plt.show()
 
@@ -466,31 +463,9 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop
             vis.freq_plot(np.where(noi_all, zfilled_data, 0), dt=dt, name='Comb input',
                           ylim=ylim_freq)
         lambda_val = auto_lambda(np.where(noi_all, zfilled_data, 0), rho, lambda_default=lambda_val,
-                                 ft_prtct=ft_prtct)
-
-    # Single-loop Auto lambda
-    # lambda_val = auto_lambda(zfilled_data, rho, lambda_default=99999999)
-    # emi_prdct_tot = sn_recognition(signal=zfilled_data, mask=input_mask, lambda_val=lambda_val, tol=tol,
-    #                                max_iter=max_iter,
-    #                                method="conj_grad_l1_reg", rho=rho)
-
-    # emi_prdct = np.squeeze(emi_prdct)
-    # factor = np.linalg.norm(noi_data, 1) / np.linalg.norm(emi_prdct[noi_all], 1)
-    # emi_prdct *= factor
-    # emi_prdct = np.abs(emi_prdct) * np.exp(-1j * np.angle(emi_prdct))
-
-    # Get the output
-    # acq_corr = samp_data - emi_prdct[samp_all]
-    #
-    # plt.figure()
-    # plt.plot(np.abs(samp_data), label="Before correction")
-    # plt.plot(np.abs(acq_corr), label="After correction")
-    # plt.title("After correction")
-    # plt.legend()
-    # plt.show()
+                                 ft_prtct=ft_prtct, Disp_Intermediate=Disp_Intermediate)
 
     result = emi_prdct_tot
-    # result = add_polarization(emi_prdct, polar_time, dt)
 
     return result
 
@@ -529,6 +504,7 @@ def sampled_to_full(signal, polar_time, post_polar_gap_time, dt, acq_len, N_echo
     gap_period = calculate_polar_period(polar_time=post_polar_gap_time, dt=dt)
     signal = signal.flatten('F')  # TODO: risk of error
     signal_pol = signal[:polar_period]
+    gap = np.zeros(gap_period, dtype=complex)
     signal_te = signal[polar_period:]
 
     # Get undersampled data and k-space
@@ -540,13 +516,13 @@ def sampled_to_full(signal, polar_time, post_polar_gap_time, dt, acq_len, N_echo
     # visualization.complex(zfilled_data, name="zfilled_data")
 
     # add polarization time
-    zfilled_data = np.concatenate([signal_pol, zfilled_data], axis=0)
+    zfilled_data = np.concatenate([signal_pol, gap, zfilled_data], axis=0)
     return zfilled_data
 
 
-def gen_pol_mask(N_echoes, TE_len, polar_time, dt):
+def gen_pol_mask(N_echoes, TE_len, polar_time, post_polar_gap_time, dt):
     noi_all = np.zeros(np.uint16(TE_len * N_echoes), dtype=bool)
-    noi_all = add_polarization(noi_all, polar_time, dt, value=1, type=bool)
+    noi_all = add_polarization(noi_all, polar_time, post_polar_gap_time, dt, value=1, type=bool)
     return noi_all.astype(bool)
 
 
@@ -657,7 +633,7 @@ def add_polarization(signal, polar_time, post_polar_gap_time, dt, value=0, type=
     return signal
 
 
-def remove_polarization(signal, time, dt):
+def remove_polarization(signal, polar_time, post_polar_gap_time, dt):
     """
     Remove polarization time from the signal
 
@@ -669,7 +645,7 @@ def remove_polarization(signal, time, dt):
     Returns:
     - numpy.ndarray: Polarized signal.
     """
-    return signal[calculate_polar_period(polar_time=time, dt=dt):]
+    return signal[calculate_polar_period(polar_time=polar_time + post_polar_gap_time, dt=dt):]
 
 
 def calculate_polar_period(polar_time, dt):
