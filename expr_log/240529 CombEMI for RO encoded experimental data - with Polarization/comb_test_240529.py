@@ -319,7 +319,7 @@ def admm_l2_l1(A, b, x0, l1_wt=1.0, rho=1.0, iter_max=100, eps=1e-2):
 
 # %% Define comb_optimized: the noise cancellation function
 def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop, post_drop, pk_win,
-                   pk_id=None, polar_time=0, rho=1.0, ft_prtct=5, Disp_Intermediate=False,
+                   pk_id=None, polar_time=0, post_polar_gap_time=0, rho=1.0, ft_prtct=5, Disp_Intermediate=False,
                    ylim_time=None, ylim_freq=None):
     """
     Comb noise self-correction method
@@ -340,6 +340,7 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop
     """
     # Parameter formatting
     polar_period = calculate_polar_period(polar_time=polar_time, dt=dt)
+    post_polar_gap_period = calculate_polar_period(polar_time=post_polar_gap_time, dt=dt)
     # signal_pol = signal[:, :polar_period]
     signal_te = signal[polar_period:].T
     pre_drop = np.uint16(pre_drop)
@@ -370,9 +371,9 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop
         print("Auto-detected peak location: %d" % pk_id)
 
     # Generate masks
-    noi_all = gen_noi_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, dt)
-    sig_all = gen_sig_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, dt)
-    samp_all = gen_samp_mask(acq_len, N_echoes, TE_len, polar_time, dt)
+    noi_all = gen_noi_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt)
+    sig_all = gen_sig_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt)
+    samp_all = gen_samp_mask(acq_len, N_echoes, TE_len, polar_time, post_polar_gap_time, dt)
 
     # Signal (echo peak) part only
     # sig_1Echo = np.zeros(acq_len, dtype=bool)
@@ -523,8 +524,9 @@ def auto_lambda(signal, rho, lambda_default=np.inf, tol=None, cvg=0.99, ft_prtct
     return -1
 
 
-def sampled_to_full(signal, polar_time, dt, acq_len, N_echoes, TE_len):
+def sampled_to_full(signal, polar_time, post_polar_gap_time, dt, acq_len, N_echoes, TE_len):
     polar_period = calculate_polar_period(polar_time=polar_time, dt=dt)
+    gap_period = calculate_polar_period(polar_time=post_polar_gap_time, dt=dt)
     signal = signal.flatten('F')  # TODO: risk of error
     signal_pol = signal[:polar_period]
     signal_te = signal[polar_period:]
@@ -548,26 +550,26 @@ def gen_pol_mask(N_echoes, TE_len, polar_time, dt):
     return noi_all.astype(bool)
 
 
-def gen_sig_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, dt):
+def gen_sig_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt):
     sig_1Echo = np.zeros(acq_len, dtype=bool)
     sig_1Echo[max(0, pk_id - sig_len_hf):min(pk_id + sig_len_hf, acq_len)] = 1
     sig_all = np.tile(np.concatenate([sig_1Echo, np.zeros(TE_len - acq_len, dtype=bool)]), N_echoes)
-    sig_all = add_polarization(sig_all, polar_time, dt, value=0, type=bool)
+    sig_all = add_polarization(sig_all, polar_time, post_polar_gap_time, dt, value=0, type=bool)
     return sig_all.astype(bool)
 
 
-def gen_noi_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, dt):
+def gen_noi_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt):
     noi_1Echo = np.ones(acq_len, dtype=bool)
     noi_1Echo[max(0, pk_id - sig_len_hf):min(pk_id + sig_len_hf, acq_len)] = 0
     noi_all = np.tile(np.concatenate([noi_1Echo, np.zeros(TE_len - acq_len, dtype=bool)]), N_echoes)
-    noi_all = add_polarization(noi_all, polar_time, dt, value=1, type=bool)
+    noi_all = add_polarization(noi_all, polar_time, post_polar_gap_time, dt, value=1, type=bool)
     return noi_all.astype(bool)
 
 
-def gen_samp_mask(acq_len, N_echoes, TE_len, polar_time, dt, pol=False):
+def gen_samp_mask(acq_len, N_echoes, TE_len, polar_time, post_polar_gap_time, dt, pol=False):
     samp_1Echo = np.concatenate([np.ones(acq_len, dtype=bool), np.zeros(TE_len - acq_len, dtype=bool)])
     samp_all = np.tile(samp_1Echo, N_echoes)
-    samp_all = add_polarization(samp_all, polar_time, dt, value=pol, type=bool)
+    samp_all = add_polarization(samp_all, polar_time, post_polar_gap_time, dt, value=pol, type=bool)
     return samp_all.astype(bool)
 
 
@@ -631,7 +633,7 @@ def peaks_only(signal):
     return peaks
 
 
-def add_polarization(signal, time, dt, value=0, type=complex):
+def add_polarization(signal, polar_time, post_polar_gap_time, dt, value=0, type=complex):
     """
     Add polarization time to the signal
 
@@ -644,11 +646,13 @@ def add_polarization(signal, time, dt, value=0, type=complex):
     - numpy.ndarray: Polarized signal.
     """
     if signal.ndim == 2:
-        polar = np.ones((1, calculate_polar_period(polar_time=time, dt=dt)), dtype=type) * value
-        signal = np.concatenate((polar, signal), axis=1)
+        polar = np.ones((1, calculate_polar_period(polar_time=polar_time, dt=dt)), dtype=type) * value
+        post_polar_gap = np.zeros((1, calculate_polar_period(polar_time=post_polar_gap_time, dt=dt)), dtype=type)
+        signal = np.concatenate((polar, post_polar_gap, signal), axis=1)
     elif signal.ndim == 1:
-        polar = np.ones(calculate_polar_period(polar_time=time, dt=dt), dtype=type) * value
-        signal = np.concatenate((polar, signal))
+        polar = np.ones(calculate_polar_period(polar_time=polar_time, dt=dt), dtype=type) * value
+        post_polar_gap = np.zeros((calculate_polar_period(polar_time=post_polar_gap_time, dt=dt)), dtype=type)
+        signal = np.concatenate((polar, post_polar_gap, signal))
 
     return signal
 
