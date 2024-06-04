@@ -49,7 +49,7 @@ max_iter = 200
 rho = 1
 lambda_val = -1  # -1 for auto regularization
 # auto lambda parameters
-ft_prtct = 2
+ft_prtct = 5
 
 # %% Process data
 
