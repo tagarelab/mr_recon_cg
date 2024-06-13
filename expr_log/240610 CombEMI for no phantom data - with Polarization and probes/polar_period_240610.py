@@ -9,12 +9,12 @@
 import numpy as np
 import scipy as sp
 import visualization as vis
-import comb_test_240606 as cs
+import comb_test_240610 as cs
 
 # plot data
 ylim_time = [-15000, 15000]
-ylim_freq = [-5e7, 5e7]
-ylim_freq_zfilled = [-5e8, 5e8]
+ylim_freq = [0, 1e4]
+ylim_freq_zfilled = [0, 1e8]
 Disp_Intermediate = True
 
 
@@ -28,10 +28,10 @@ def avg_first_k_peaks(signal, echo_len, k=10):
 
 
 # %% Load raw data
-file_name = '240606_noise_only'
+file_name = 'NoPhantom_NoPrePol'
 mat_file = sp.io.loadmat('sim_input/' + file_name + '.mat')
-raw_pol_all = mat_file['ch1'][:17 * 6000, :]
-raw_sig_all = mat_file['ch1'][17 * 6000:, :]
+raw_pol_all = mat_file['ch2'][:17 * 6000, :]
+raw_sig_all = mat_file['ch2'][17 * 6000:, :]
 comb_pol_all = np.zeros(raw_pol_all.shape, dtype='complex')
 # vis.repetitions(abs(sp.fft.fft(raw_pol_all,axis=0)), name="Polarization Period")
 # vis.absolute(raw_pol_all, name="Polarization Period")
@@ -108,8 +108,10 @@ for i in [0]:
     zfilled_data = cs.sampled_to_full(raw_sig, polar_time, post_polar_gap_time, dt, acq_len, N_echoes, TE_len)
 
     if Disp_Intermediate:
-        vis.freq_plot(np.where(samp_all, zfilled_data, 0), dt=dt, name='Continuous Raw Signal (without Comb Shaped '
-                                                                       'Mask)', ylim=ylim_freq_zfilled)
+        # vis.freq_plot(np.where(samp_all, zfilled_data, 0), dt=dt, name='X coil', ylim=ylim_freq_zfilled,
+        #               real_imag=False, peaks=True)
+        vis.freq_plot(np.where(samp_all, zfilled_data, 0), dt=dt, name='Signal', ylim=ylim_freq_zfilled,
+                      real_imag=False, peaks=True)
 
     # # %% perform comb
     # cancelled_comb_raw = cs.comb_optimized(signal=raw_sig, N_echoes=N_echoes, TE=TE, dt=dt, lambda_val=lambda_val,
