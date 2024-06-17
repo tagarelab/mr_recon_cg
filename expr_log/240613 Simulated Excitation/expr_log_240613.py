@@ -60,8 +60,6 @@ B1_y = algb.interp_by_pts(current_grad * B1_data[1, :, :, :], x_b1_raw, y_b1_raw
 B1_z = algb.interp_by_pts(current_grad * B1_data[2, :, :, :], x_b1_raw, y_b1_raw, z_b1_raw, intrp_pts, method='linear')
 B1_raw = np.array([B1_x, B1_y, B1_z])
 
-vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(B1_raw, axis=0), xlim=xlim, ylim=ylim, zlim=zlim, title='B1 (mT)')
-
 # %% Generate Mask and Phantom
 # Breast Mask
 R = 60  # mm
@@ -103,9 +101,14 @@ LR_cut = (X_M > -3) & (X_M < 3)
 
 # Visualize
 vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(B0_polar, axis=0), xlim=xlim, ylim=ylim, zlim=zlim, mask=slice,
-              title='B0 (T)')
+              title='B0 (mT)')
 vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(B0_polar, axis=0), xlim=xlim, ylim=ylim, zlim=zlim, mask=SI_cut,
-              title='B0 (T)')
+              title='B0 (mT)')
+
+vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(B1_raw, axis=0), xlim=xlim, ylim=ylim, zlim=zlim, mask=slice,
+              title='B1 (mT)')
+vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(B1_raw, axis=0), xlim=xlim, ylim=ylim, zlim=zlim, mask=SI_cut,
+              title='B1 (mT)')
 
 # %% effective B1
 # B1_eff = np.zeros((3, intrp_x, intrp_y, intrp_z))
