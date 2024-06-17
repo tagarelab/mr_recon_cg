@@ -27,13 +27,23 @@ def rot_mat(u, theta):
                      [u[0] * u[2] * (1 - c) - u[1] * s, u[1] * u[2] * (1 - c) - u[0] * s, u[2] ** 2 * (1 - c) + c]])
 
 
-def interp_by_pts(M, x_axis, y_axis, z_axis, intrp_pts, method='linear'):
+def interp_by_pts(M, x_axis, y_axis, z_axis, intrp_pts, method='linear', empty_val=0):
     interpolator = RegularGridInterpolator((x_axis, y_axis, z_axis), M, method=method)
+    interpolated_matrix = np.empty(intrp_pts.shape[:-1])
     # check if the interpolation points are within the range of the raw data
     if np.any(intrp_pts < np.array([x_axis[0], y_axis[0], z_axis[0]])) or np.any(
             intrp_pts > np.array([x_axis[-1], y_axis[-1], z_axis[-1]])):
-        raise ValueError('Error: Interpolation points are out of range of the raw data.')
-    interpolated_matrix = interpolator(intrp_pts)
+        warnings.warn(
+            'Warning: Interpolation points are out of range of the raw data. Fill with empty_val: %.2f' % empty_val)
+        for index, _ in np.ndenumerate(intrp_pts[:, :, :, 0]):
+            point = intrp_pts[index[0], index[1], index[2], :]
+            if np.any(point < np.array([x_axis[0], y_axis[0], z_axis[0]])) or np.any(
+                    point > np.array([x_axis[-1], y_axis[-1], z_axis[-1]])):
+                interpolated_matrix[index] = empty_val
+            else:
+                interpolated_matrix[index] = interpolator(point)
+    else:
+        interpolated_matrix = interpolator(intrp_pts)
     return interpolated_matrix
 
 
