@@ -155,9 +155,7 @@ B1_VOI = B1_raw[:, VOI]
 omega_0 = gamma * np.linalg.norm(B0_VOI, axis=0)
 
 # Get B1_eff
-B1_eff = np.zeros((3, B1_VOI.shape[1]))
-for i in range(B1_VOI.shape[1]):
-    B1_eff[:, i] = acq.B1_effective(B1_VOI[:, i], B0_VOI[:, i])
+B1_eff = acq.B1_effective(B1_VOI, B0_VOI)
 
 # Get flip angle
 B1_eff_amp = np.linalg.norm(B1_eff, axis=0)
@@ -171,7 +169,17 @@ flip_angle_rad = np.deg2rad(flip_angle_deg)
 rot_mat = algb.rot_mat(B1_eff, flip_angle_rad)
 E = ops.hadamard_matrix_op(rot_mat)
 
-# Visualization
+# %% Coil Sensitivity
+sensi_mat = np.diag(B1_eff)
+C = ops.hadamard_op(sensi_mat)
+
+# %% Winding
+
+
+# %% Dephasing
+
+
+# %% Visualization
 # Magnetization
 M = P.forward(O)
 
@@ -182,3 +190,7 @@ vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(M, axis=0), xlim=xlim, ylim
 M_excited = E.forward(M)
 vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(M_excited, axis=0), xlim=xlim, ylim=ylim, zlim=zlim,
               title='Excited Magnetization', mask=VOI)
+
+# Measured Signal
+
+# %% Reconstruction
