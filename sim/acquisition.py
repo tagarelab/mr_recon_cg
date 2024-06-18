@@ -16,6 +16,12 @@ def B1_effective(B1, B0):
     Calculate the effective B1 field
     This function is adapted from a MATLAB function by Github Copilot and edited & tested by the author.
 
+    Expression equivalent to: B1 - np.dot(B0, B1) / np.linalg.norm(B0) * (B0 / np.linalg.norm(B0)).
+    np.dot(B0, B1) / np.linalg.norm(B0) is the parallel component of B1 to B0.
+    B0 / np.linalg.norm(B0) is the unit vector of B0.
+    The parallel component of B1 to B0 is then multiplied by the unit vector of B0.
+    The result is then subtracted from B1 to get the perpendicular component of B1 to B0.
+
     Parameters:
     - B1 (numpy.ndarray): The B1 field.
     - B0 (numpy.ndarray): The B0 field.
