@@ -11,19 +11,29 @@ from scipy.interpolate import RegularGridInterpolator
 import warnings
 
 
-# def perp_vec(v1,v2):
-#     """
-#     Calculate the perpendicular element of vector v1 to vector v2.
-#     This function is adapted from a MATLAB function by Github Copilot and edited & tested by the author.
-#
-#     Parameters:
-#     - v1 (numpy.ndarray): The first vector.
-#     - v2 (numpy.ndarray): The second vector.
-#
-#     Returns:
-#     - numpy.ndarray: The perpendicular vector.
-#     """
-#     return v1 - np.dot(v1, v2) / np.linalg.norm(v2)
+def parallel_component(v, u):
+    """
+    Calculate the parallel component of vector v to vector u.
+    np.dot(v, u) / np.linalg.norm(u) is the parallel component of v to u.
+    u / np.linalg.norm(u) is the unit vector of u.
+    The parallel component of v to u is then multiplied by the unit vector of u.
+
+    :param v: vector v
+    :param u: vector u
+    :return: parallel component of vector v to vector u
+    """
+    return np.dot(v, u) / np.linalg.norm(u) ** 2 * u
+
+
+def perpendicular_component(v, u):
+    """
+    Calculate the perpendicular component of vector v to vector u.
+
+    :param v: vector v
+    :param u: vector u
+    :return: perpendicular component of vector v to vector u
+    """
+    return v - parallel_component(v, u)
 
 
 def rot_mat(u, theta):
