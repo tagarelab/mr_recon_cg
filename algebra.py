@@ -11,6 +11,21 @@ from scipy.interpolate import RegularGridInterpolator
 import warnings
 
 
+# def perp_vec(v1,v2):
+#     """
+#     Calculate the perpendicular element of vector v1 to vector v2.
+#     This function is adapted from a MATLAB function by Github Copilot and edited & tested by the author.
+#
+#     Parameters:
+#     - v1 (numpy.ndarray): The first vector.
+#     - v2 (numpy.ndarray): The second vector.
+#
+#     Returns:
+#     - numpy.ndarray: The perpendicular vector.
+#     """
+#     return v1 - np.dot(v1, v2) / np.linalg.norm(v2)
+
+
 def rot_mat(u, theta):
     """
     Generate matrix to perform rotation on a 3D vector.
@@ -19,6 +34,9 @@ def rot_mat(u, theta):
     :param theta: rotate this much
     :return:
     """
+    # Normalize the vector
+    u = u / np.linalg.norm(u)
+
     c = np.cos(theta)
     s = np.sin(theta)
 
