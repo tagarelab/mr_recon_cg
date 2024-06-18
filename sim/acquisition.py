@@ -22,10 +22,18 @@ def B1_effective(B1, B0):
     - B0 (numpy.ndarray): The B0 field.
 
     Returns:
-    - numpy.ndarray: The effective B1 field.
+    - numpy.ndarray: The effective B1 field, should have the same shape as B1
     """
+    if B1.shape != B0.shape:
+        raise ValueError("B1 and B0 must have the same shape.")
+    if B1.ndim == 1:
+        B1_eff = algb.perpendicular_component(B1, B0)
+    else:
+        B1_eff = np.zeros(B1.shape)
+        for i in range(B1.shape[1]):
+            B1_eff[:, i] = algb.perpendicular_component(B1[:, i], B0[:, i])
 
-    return algb.perpendicular_component(B1, B0)
+    return B1_eff
 
 
 def slice_select(b0_mag, ctr_mag, slc_tkns):
