@@ -11,6 +11,14 @@ from scipy.interpolate import RegularGridInterpolator
 import warnings
 
 
+def linear_to_db(x):
+    return 20 * np.log10(x)
+
+
+def db_to_linear(x):
+    return 10 ** (x / 20)
+
+
 def parallel_component(v, u):
     """
     Calculate the parallel component of vector v to vector u.
