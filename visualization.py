@@ -16,12 +16,18 @@ import algebra
 __all__ = ['quiver3d', 'scatter3d']
 
 
+def show_all_plots():
+    plt.show()
+    plt.close('all')
+
+
 def quiver3d(vector, orig=None, label=None, xlim=None, ylim=None, zlim=None, title=None):
     """
     3D quiver plot
     :param title:
     :return:
     """
+    fig = plt.figure()
     if orig is None:
         orig = [0, 0, 0]
 
@@ -30,7 +36,7 @@ def quiver3d(vector, orig=None, label=None, xlim=None, ylim=None, zlim=None, tit
 
     colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k']
 
-    ax = plt.figure().add_subplot(projection='3d')
+    ax = fig.add_subplot(projection='3d')
 
     for i in range(vector.shape[1]):
         ax.quiver(orig[0], orig[1], orig[2], vector[0, i], vector[1, i], vector[2, i], label=label[i],
@@ -54,7 +60,6 @@ def quiver3d(vector, orig=None, label=None, xlim=None, ylim=None, zlim=None, tit
         ax.set_zlim(zlim)
 
     ax.legend()
-    plt.show()
 
 
 def scatter3d(B0_LR, B0_SI, B0_AP, grad, xlim=None, ylim=None, zlim=None, clim=None, mask=None, title=None,
@@ -111,8 +116,6 @@ def scatter3d(B0_LR, B0_SI, B0_AP, grad, xlim=None, ylim=None, zlim=None, clim=N
     if clim is not None:
         scatter.set_clim(clim[0], clim[1])
 
-    plt.show()
-
 
 def sig_time(time, signal):
     """
@@ -121,21 +124,20 @@ def sig_time(time, signal):
     :param time: time
     :return: None
     """
-    plt.figure()
+    fig = plt.figure()
     plt.plot(time, np.abs(signal), label='Magnitude')
     plt.plot(time, np.real(signal), label='Real')
     plt.plot(time, np.imag(signal), label='Imaginary')
     plt.xlabel('Time (s)')
     plt.ylabel('Signal')
-    plt.show()
 
 
 def imshow(image, name=None):
+    fig = plt.figure()
     plt.imshow(image, cmap='gray')
     if name is not None:
         plt.title(name)
     plt.colorbar()
-    plt.show()
 
 
 def snr_tradeoff_compare(sig_1, sig_2, noi_range=None, sig_1_name="Signal 1", sig_2_name="Signal 2"):
@@ -162,13 +164,13 @@ def snr_tradeoff_compare(sig_1, sig_2, noi_range=None, sig_1_name="Signal 1", si
     else:
         xaxis_temp = np.arange(N_rep) + 1
         for k in range(N_sig_ch):
+            fig = plt.figure()
             plt.plot(xaxis_temp, snr_1[:, k], label=sig_1_name)
             plt.plot(xaxis_temp, snr_2[:, k], label=sig_2_name)
             plt.xlabel('# of Scans Averaged')
             plt.ylabel('SNR')
             plt.title('SNR trade-off with # of Averages in ch' + str(k))
             plt.legend()
-            plt.show()
 
     if N_sig_ch == 1:
         snr_1 = np.squeeze(snr_1)
@@ -178,6 +180,7 @@ def snr_tradeoff_compare(sig_1, sig_2, noi_range=None, sig_1_name="Signal 1", si
 
 
 def curve_fit(data, func, name=None, xaxis=None, p0=None):
+    fig = plt.figure()
     # got this function from stack overflow
     if xaxis is None:
         xaxis = np.arange(len(data))
@@ -199,13 +202,13 @@ def curve_fit(data, func, name=None, xaxis=None, p0=None):
     plt.plot(xaxis, data, label='data')
     plt.plot(xaxis, data_fit, label='after fitting')
     plt.legend()
-    plt.show()
 
     return fit
 
 
 def scatter_mean_std(data, name=None, xaxis=None):
     # data = abs(data)
+    fig = plt.figure()
     if xaxis is None:
         xaxis = np.arange(len(data))
     plt.plot(xaxis, data)
@@ -222,75 +225,47 @@ def scatter_mean_std(data, name=None, xaxis=None):
         plt.title(name)
 
     plt.legend()
-    plt.show()
 
     return mean, std
 
 
-def plot_against_frequency(signal, frag_len, dt, name=None, ylim=None, real_imag=True):
+def plot_against_frequency(signal, frag_len, dt, name=None, ylim=None, real_imag=True, peak_info=None,
+                           log_scale=True):
+    plt.figure()
     freq_axis = fft.fftshift(fft.fftfreq(frag_len, dt)) / 1000
+
+    if log_scale:
+        signal = algebra.linear_to_db(signal)
+
     plt.plot(freq_axis, abs(signal), label='Magnitude')
     if real_imag:
         plt.plot(freq_axis, np.real(signal), label='Real')
         plt.plot(freq_axis, np.imag(signal), label='Imaginary')
+
+    if peak_info is not None:
+        # Find the peaks in the signal
+        signal_abs = np.abs(signal)
+        peaks, _ = sp.signal.find_peaks(signal_abs, height=peak_info["height"] * np.median(signal_abs),
+                                        distance=peak_info["distance"])
+        for peak in peaks:
+            plt.text(freq_axis[peak], signal_abs[peak], '%.2f kHz' % freq_axis[peak], ha='center')
     plt.legend()
     plt.xlabel('Frequency (kHz)')
     if ylim is not None:
         plt.ylim(ylim)
     if name is not None:
         plt.title(name)
-    plt.show()
 
 
-def freq_plot(signal, dt, name=None, ylim=None, real_imag=True, peaks=False):
+def freq_plot(signal, dt, name=None, ylim=None, real_imag=True, peak_info=None, log_scale=True):
     signal_ft = fft.fftshift(fft.fft(fft.fftshift(signal)))
     length = len(signal_ft)
-    if peaks:
-        plot_and_label_peaks(signal_ft, length, dt, name=name, ylim=ylim, real_imag=real_imag)
-    else:
-        plot_against_frequency(signal_ft, length, dt, name, ylim, real_imag)
-
-
-def plot_and_label_peaks(signal, frag_len, dt, name=None, ylim=None, real_imag=True):
-    """
-    Plot a 1D signal and label the peaks.
-    This function is generated by Github Copilot and edited & tested by the author.
-
-    Parameters:
-    - signal (numpy.ndarray): The 1D signal.
-
-    Returns:
-    - None
-    """
-    freq_axis = fft.fftshift(fft.fftfreq(frag_len, dt)) / 1000
-
-    # Find the peaks in the signal
-    signal_abs = np.abs(signal)
-    peaks, _ = sp.signal.find_peaks(signal_abs, height=30 * np.median(signal_abs), distance=1000)
-
-    # Plot the signal
-    plt.plot(signal_abs, label='Signal')
-
-    if real_imag:
-        plt.plot(np.real(signal), label='Real')
-        plt.plot(np.imag(signal), label='Imaginary')
-
-    # Label the peaks
-    for peak in peaks:
-        plt.text(peak, signal_abs[peak], '%.2f kHz' % freq_axis[peak], ha='center')
-
-    plt.legend()
-    plt.xlabel('Frequency (kHz)')
-    if ylim is not None:
-        plt.ylim(ylim)
-    if name is not None:
-        plt.title(name)
-
-    # Show the plot
-    plt.show()
+    plot_against_frequency(signal_ft, length, dt, name=name, ylim=ylim, real_imag=real_imag, peak_info=peak_info,
+                           log_scale=log_scale)
 
 
 def repetitions(signal, name=None, ylim=None):
+    fig = plt.figure()
     if ylim is None:
         ylim = [0, signal.max()]
     im = plt.imshow(signal, cmap=cm.coolwarm, interpolation='nearest', vmin=ylim[0], vmax=ylim[1],
@@ -299,8 +274,6 @@ def repetitions(signal, name=None, ylim=None):
 
     if name is not None:
         plt.title(name)
-
-    plt.show()
 
 
 def freq_analysis(signal, frag_len, dt, name=None, type='heatmap'):
@@ -317,6 +290,7 @@ def freq_analysis(signal, frag_len, dt, name=None, type='heatmap'):
     num_echo_axis = range(N_frag)
     freq_axis, num_echo_axis = np.meshgrid(freq_axis, num_echo_axis)
 
+    fig = plt.figure()
     if type == '3d':
         ax = plt.axes(projection='3d')
         # ax.set_zlim([0, 30000])
@@ -336,20 +310,18 @@ def freq_analysis(signal, frag_len, dt, name=None, type='heatmap'):
     if name is not None:
         plt.title(name)
 
-    plt.show()
-
 
 def absolute(signal, name=None, ylim=None):
-    plt.plot(np.abs(signal), label="abs")
+    fig = plt.figure()
+    plt.plot(np.abs(signal))
     if ylim is not None:
         plt.ylim(ylim)
     if name is not None:
         plt.title(name)
-    # plt.legend()
-    plt.show()
 
 
 def complex(signal, name=None, rect=True, ylim=None, xlabel=None, ylabel=None):
+    fig = plt.figure()
     if rect is True:
         plt.plot(np.abs(signal), label="abs")
         plt.plot(np.real(signal), label="real")
@@ -370,4 +342,3 @@ def complex(signal, name=None, rect=True, ylim=None, xlabel=None, ylabel=None):
     if name is not None:
         plt.title(name)
     plt.legend()
-    plt.show()
