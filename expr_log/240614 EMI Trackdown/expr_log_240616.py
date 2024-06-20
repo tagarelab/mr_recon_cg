@@ -14,9 +14,9 @@ import mr_io
 import visualization as vis
 
 # plot data
-ylim_time = [-15000, 15000]
-ylim_freq = [-3e5, 3e5]
-ylim_freq_zfilled = [-1e8, 1e8]
+ylim_time = None
+ylim_freq = None
+ylim_freq_zfilled = None
 Disp_Intermediate = True
 
 
