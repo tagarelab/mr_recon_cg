@@ -8,9 +8,7 @@ import scipy.io as sio
 import matplotlib.pyplot as plt
 import numpy as np
 
-sys.path.append('utils_gg')
-
-# Physics parameters
+# GG: Script used to test forward and backward operators for eventual use in class epi_op
 
 # Prep imaging vars
 Sim = {}

@@ -10,6 +10,8 @@ from skimage.data import shepp_logan_phantom
 from skimage.transform import resize
 import scipy.io as sio
 
+# GG: First attempt at implementing cg on a simulated problem associated with epi_op
+
 # Prep imaging vars
 Sim = {}
 Sim['RO_t_tot'] = 0.001  # seconds, echo DURATION!!!
