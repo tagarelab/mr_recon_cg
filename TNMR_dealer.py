@@ -11,7 +11,7 @@ import mr_io
 __all__ = ['read_tnt_1d', 'sort_channels']
 
 
-def scan_2_mat(loc=None, interleave=None, N_ch=None, rep=None, name=None, seg=None, confirm=True):
+def scan_2_mat(loc=None, interleave=None, N_ch=None, rep=None, name=None, seg=None, confirm=True, new_name=None):
     # Prompt user input if not provided when function is called
     if loc is None:
         loc = input('What is the directory of your data (end with \\)?\n')
@@ -61,7 +61,10 @@ def scan_2_mat(loc=None, interleave=None, N_ch=None, rep=None, name=None, seg=No
         mdic = {}
         for j in range(N_ch):
             mdic['ch' + str(j + 1)] = data_mat[:, :, j]
-        mr_io.save_dict(mdic, name=name, path=loc, date=False)
+
+        if new_name is None:
+            new_name = name
+        mr_io.save_dict(mdic, name=new_name, path=loc, date=False)
 
     else:
         print('Data not saved.')
