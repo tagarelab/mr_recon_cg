@@ -21,6 +21,51 @@ def show_all_plots():
     plt.close('all')
 
 
+def set_limit_title(ax=None, xlim=None, ylim=None, zlim=None, clim=None, title=None, xlabel=None, ylabel=None,
+                    zlabel=None, image=None):
+    if ax is None:
+        if xlim is not None:
+            plt.xlim(xlim)
+
+        if ylim is not None:
+            plt.ylim(ylim)
+
+        if title is not None:
+            plt.title(title)
+
+        if xlabel is not None:
+            plt.xlabel(xlabel)
+
+        if ylabel is not None:
+            plt.ylabel(ylabel)
+
+    else:
+        if xlim is not None:
+            ax.set_xlim(xlim)
+
+        if ylim is not None:
+            ax.set_ylim(ylim)
+
+        if zlim is not None:
+            ax.set_zlim(zlim)
+
+        if title is not None:
+            ax.set_title(title)
+
+        if xlabel is not None:
+            ax.set_xlabel(xlabel)
+
+        if ylabel is not None:
+            ax.set_ylabel(ylabel)
+
+        if zlabel is not None:
+            ax.set_zlabel(zlabel)
+
+    if image is not None:
+        if clim is not None:
+            image.set_clim(clim[0], clim[1])
+
+
 def quiver3d(vector, orig=None, label=None, xlim=None, ylim=None, zlim=None, title=None):
     """
     3D quiver plot
@@ -42,23 +87,8 @@ def quiver3d(vector, orig=None, label=None, xlim=None, ylim=None, zlim=None, tit
         ax.quiver(orig[0], orig[1], orig[2], vector[0, i], vector[1, i], vector[2, i], label=label[i],
                   colors=colors[i % len(colors)])
 
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
-    ax.set_zlabel('z')
     ax.axis('equal')
-
-    if title is not None:
-        ax.set_title(title)
-
-    if xlim is not None:
-        ax.set_xlim(xlim)
-
-    if ylim is not None:
-        ax.set_ylim(ylim)
-
-    if zlim is not None:
-        ax.set_zlim(zlim)
-
+    set_limit_title(ax=ax, xlim=xlim, ylim=ylim, zlim=zlim, title=title, xlabel='X', ylabel='Y', zlabel='Z')
     ax.legend()
     return fig
 
@@ -95,30 +125,12 @@ def scatter3d(B0_LR, B0_SI, B0_AP, grad, xlim=None, ylim=None, zlim=None, clim=N
     scatter = ax.scatter(X_M, Y_M, Z_M, c=grad, s=1)
 
     plt.colorbar(scatter)
-
-    # ax.set_title("Liver Gradient at "+grad_str+" mT/m")
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.set_zlabel(zlabel)
     ax.axis('equal')
-
-    if title is not None:
-        ax.set_title(title)
-
-    if xlim is not None:
-        ax.set_xlim(xlim)
-
-    if ylim is not None:
-        ax.set_ylim(ylim)
-
-    if zlim is not None:
-        ax.set_zlim(zlim)
-
-    if clim is not None:
-        scatter.set_clim(clim[0], clim[1])
+    set_limit_title(ax=ax, xlim=xlim, ylim=ylim, zlim=zlim, clim=clim, title=title, xlabel=xlabel, ylabel=ylabel,
+                    zlabel=zlabel, image=scatter)
 
 
-def sig_time(time, signal):
+def sig_time(time, signal, xlabel='Time (s)', ylabel='Signal', title='Signal in Time Domain'):
     """
     2D signal plot
     :param signal: signal
@@ -129,17 +141,16 @@ def sig_time(time, signal):
     plt.plot(time, np.abs(signal), label='Magnitude')
     plt.plot(time, np.real(signal), label='Real')
     plt.plot(time, np.imag(signal), label='Imaginary')
-    plt.xlabel('Time (s)')
-    plt.ylabel('Signal')
+    plt.legend()
+    set_limit_title(xlabel=xlabel, ylabel=ylabel, title=title)
     return fig
 
 
 def imshow(image, name=None):
     fig = plt.figure()
     plt.imshow(image, cmap='gray')
-    if name is not None:
-        plt.title(name)
     plt.colorbar()
+    set_limit_title(title=name)
     return fig
 
 
@@ -170,9 +181,7 @@ def snr_tradeoff_compare(sig_1, sig_2, noi_range=None, sig_1_name="Signal 1", si
             fig = plt.figure()
             plt.plot(xaxis_temp, snr_1[:, k], label=sig_1_name)
             plt.plot(xaxis_temp, snr_2[:, k], label=sig_2_name)
-            plt.xlabel('# of Scans Averaged')
-            plt.ylabel('SNR')
-            plt.title('SNR trade-off with # of Averages in ch' + str(k))
+            set_limit_title(xlabel='# of Scans Averaged', ylabel='SNR', title='SNR trade-off in ch' + str(k))
             plt.legend()
             plt.show(fig)
 
@@ -183,7 +192,7 @@ def snr_tradeoff_compare(sig_1, sig_2, noi_range=None, sig_1_name="Signal 1", si
     return snr_1, snr_2
 
 
-def curve_fit(data, func, name=None, xaxis=None, p0=None):
+def curve_fit(data, func, name=None, xaxis=None, p0=None, xlabel=None, ylabel=None):
     fig = plt.figure()
     # got this function from stack overflow
     if xaxis is None:
@@ -197,8 +206,7 @@ def curve_fit(data, func, name=None, xaxis=None, p0=None):
     # recreate the fitted curve using the optimized parameters
     data_fit = func(xaxis, *fit[0])
 
-    if name is not None:
-        plt.title(name)
+    set_limit_title(xlabel=xlabel, ylabel=ylabel, title=name)
 
     reminder_std = np.std(np.abs(data - data_fit))
     plt.ylabel('std = {}'.format(reminder_std))
@@ -206,7 +214,6 @@ def curve_fit(data, func, name=None, xaxis=None, p0=None):
     plt.plot(xaxis, data, label='data')
     plt.plot(xaxis, data_fit, label='after fitting')
     plt.legend()
-
     plt.show(fig)
 
     return fit
@@ -227,8 +234,7 @@ def scatter_mean_std(data, name=None, xaxis=None):
                colors=['g'])
     plt.hlines(mean - std, xaxis[0], xaxis[-1], colors=['g'])
 
-    if name is not None:
-        plt.title(name)
+    set_limit_title(title=name)
 
     plt.legend()
     plt.show(fig)
@@ -236,9 +242,9 @@ def scatter_mean_std(data, name=None, xaxis=None):
     return mean, std
 
 
-def plot_against_frequency(signal, frag_len, dt, name=None, ylim=None, real_imag=True, peak_info=None,
+def plot_against_frequency(signal, frag_len, dt, name=None, xlim=None, ylim=None, real_imag=True, peak_info=None,
                            log_scale=True):
-    plt.figure()
+    fig = plt.figure()
     freq_axis = fft.fftshift(fft.fftfreq(frag_len, dt)) / 1000
 
     if log_scale:
@@ -257,11 +263,10 @@ def plot_against_frequency(signal, frag_len, dt, name=None, ylim=None, real_imag
         for peak in peaks:
             plt.text(freq_axis[peak], signal_abs[peak], '%.2f kHz' % freq_axis[peak], ha='center')
     plt.legend()
-    plt.xlabel('Frequency (kHz)')
-    if ylim is not None:
-        plt.ylim(ylim)
-    if name is not None:
-        plt.title(name)
+    set_limit_title(xlabel='Frequency (kHz)', ylabel='Magnitude (dB)' if log_scale else 'Magnitude', title=name,
+                    xlim=xlim,
+                    ylim=ylim)
+    plt.show(fig)
 
 
 def freq_plot(signal, dt, name=None, ylim=None, real_imag=True, peak_info=None, log_scale=True):
@@ -279,10 +284,11 @@ def repetitions(signal, name=None, ylim=None):
                     aspect='auto')
     plt.colorbar(im)
 
-    if name is not None:
-        plt.title(name)
+    set_limit_title(title=name)
 
     return fig
+
+
 def freq_analysis(signal, frag_len, dt, name=None, type='heatmap'):
     signal = signal.reshape(-1)
     N_frag = int(len(signal) / frag_len)
@@ -293,16 +299,14 @@ def freq_analysis(signal, frag_len, dt, name=None, type='heatmap'):
     sample_freq = 1 / dt
     step = sample_freq / frag_len
     # freq_axis = np.arange(-sample_freq / 2, sample_freq / 2, step)
-    freq_axis = fft.fftshift(fft.fftfreq(frag_len, dt))
+    freq_axis = fft.fftshift(fft.fftfreq(frag_len, dt)) / 1000
     num_echo_axis = range(N_frag)
     freq_axis, num_echo_axis = np.meshgrid(freq_axis, num_echo_axis)
+    ax = None
 
     fig = plt.figure()
     if type == '3d':
         ax = plt.axes(projection='3d')
-        # ax.set_zlim([0, 30000])
-        ax.set_xlabel('Freq offset (Hz)')
-        ax.set_ylabel('Echoes (#)')
         surf = ax.plot_surface(freq_axis, num_echo_axis, abs(freq_mat), cmap=cm.coolwarm,
                                linewidth=0, antialiased=False)
 
@@ -310,12 +314,9 @@ def freq_analysis(signal, frag_len, dt, name=None, type='heatmap'):
         im = plt.imshow(abs(freq_mat), cmap=cm.coolwarm, interpolation='nearest',
                         extent=[-sample_freq / 2 / 1000, sample_freq / 2 / 1000, 1, N_frag], vmin=0, vmax=0.5e6,
                         aspect='auto')
-        plt.xlabel('Freq offset (kHz)')
-        plt.ylabel('Echoes (#)')
         plt.colorbar(im)
 
-    if name is not None:
-        plt.title(name)
+    set_limit_title(ax=ax, title=name, xlabel='Frequency (kHz)', ylabel='Echo #')
 
     return fig
 
@@ -323,11 +324,7 @@ def freq_analysis(signal, frag_len, dt, name=None, type='heatmap'):
 def absolute(signal, name=None, ylim=None):
     fig = plt.figure()
     plt.plot(np.abs(signal))
-    if ylim is not None:
-        plt.ylim(ylim)
-    if name is not None:
-        plt.title(name)
-
+    set_limit_title(title=name, ylim=ylim)
     return fig
 
 
@@ -341,17 +338,7 @@ def complex(signal, name=None, rect=True, ylim=None, xlabel=None, ylabel=None):
         plt.plot(np.unwrap(np.angle(signal)), label="angle")
         # plt.plot(np.angle(signal), label="angle")
 
-    if ylim is not None:
-        plt.ylim(ylim)
-
-    if xlabel is not None:
-        plt.xlabel(xlabel)
-
-    if ylabel is not None:
-        plt.ylabel(ylabel)
-
-    if name is not None:
-        plt.title(name)
+    set_limit_title(title=name, ylim=ylim, xlabel=xlabel, ylabel=ylabel)
     plt.legend()
 
     return fig
