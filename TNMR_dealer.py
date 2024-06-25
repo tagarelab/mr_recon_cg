@@ -11,7 +11,7 @@ import mr_io
 __all__ = ['read_tnt_1d', 'sort_channels']
 
 
-def scan_2_mat(loc=None, interleave=None, N_ch=None, rep=None, name=None, seg=None):
+def scan_2_mat(loc=None, interleave=None, N_ch=None, rep=None, name=None, seg=None, confirm=True):
     # Prompt user input if not provided when function is called
     if loc is None:
         loc = input('What is the directory of your data (end with \\)?\n')
@@ -37,8 +37,11 @@ def scan_2_mat(loc=None, interleave=None, N_ch=None, rep=None, name=None, seg=No
     seg_len = int(ch_len / seg)
 
     print('Output matrix size per channel:\n repetition axis: {0:d}, data axis: {1:d}\n'.format(rep * seg, seg_len))
-    proceed = input('Proceed to saving (yes/no)?')
-    if proceed == 'yes':
+    if confirm:
+        proceed = input('Proceed to saving (yes/no)?')
+        if proceed == 'yes':
+            confirm = False
+    if not confirm:
         data_mat = np.zeros((seg_len, rep * seg, N_ch), dtype='complex')
 
         if rep == 1:
