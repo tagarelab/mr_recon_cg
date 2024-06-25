@@ -60,6 +60,7 @@ def quiver3d(vector, orig=None, label=None, xlim=None, ylim=None, zlim=None, tit
         ax.set_zlim(zlim)
 
     ax.legend()
+    return fig
 
 
 def scatter3d(B0_LR, B0_SI, B0_AP, grad, xlim=None, ylim=None, zlim=None, clim=None, mask=None, title=None,
@@ -130,6 +131,7 @@ def sig_time(time, signal):
     plt.plot(time, np.imag(signal), label='Imaginary')
     plt.xlabel('Time (s)')
     plt.ylabel('Signal')
+    return fig
 
 
 def imshow(image, name=None):
@@ -138,6 +140,7 @@ def imshow(image, name=None):
     if name is not None:
         plt.title(name)
     plt.colorbar()
+    return fig
 
 
 def snr_tradeoff_compare(sig_1, sig_2, noi_range=None, sig_1_name="Signal 1", sig_2_name="Signal 2"):
@@ -171,6 +174,7 @@ def snr_tradeoff_compare(sig_1, sig_2, noi_range=None, sig_1_name="Signal 1", si
             plt.ylabel('SNR')
             plt.title('SNR trade-off with # of Averages in ch' + str(k))
             plt.legend()
+            plt.show(fig)
 
     if N_sig_ch == 1:
         snr_1 = np.squeeze(snr_1)
@@ -203,6 +207,8 @@ def curve_fit(data, func, name=None, xaxis=None, p0=None):
     plt.plot(xaxis, data_fit, label='after fitting')
     plt.legend()
 
+    plt.show(fig)
+
     return fit
 
 
@@ -225,6 +231,7 @@ def scatter_mean_std(data, name=None, xaxis=None):
         plt.title(name)
 
     plt.legend()
+    plt.show(fig)
 
     return mean, std
 
@@ -275,7 +282,7 @@ def repetitions(signal, name=None, ylim=None):
     if name is not None:
         plt.title(name)
 
-
+    return fig
 def freq_analysis(signal, frag_len, dt, name=None, type='heatmap'):
     signal = signal.reshape(-1)
     N_frag = int(len(signal) / frag_len)
@@ -310,6 +317,8 @@ def freq_analysis(signal, frag_len, dt, name=None, type='heatmap'):
     if name is not None:
         plt.title(name)
 
+    return fig
+
 
 def absolute(signal, name=None, ylim=None):
     fig = plt.figure()
@@ -318,6 +327,8 @@ def absolute(signal, name=None, ylim=None):
         plt.ylim(ylim)
     if name is not None:
         plt.title(name)
+
+    return fig
 
 
 def complex(signal, name=None, rect=True, ylim=None, xlabel=None, ylabel=None):
@@ -342,3 +353,5 @@ def complex(signal, name=None, rect=True, ylim=None, xlabel=None, ylabel=None):
     if name is not None:
         plt.title(name)
     plt.legend()
+
+    return fig

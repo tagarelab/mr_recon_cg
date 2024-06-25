@@ -40,12 +40,20 @@ filename = 'B1_51'
 FOV = 0.24
 current_grad = 100
 
-# B1_data = mr_io.load_single_mat(name=filename, path=path)['B1'] * 1e3
-B1_coords = mr_io.load_single_mat(name='glr_plane_field_coords', path=path)['field_coords'] * 1e3
-B1_data_raw = mr_io.load_single_mat(name='glr_plane_field_strength', path=path)['field_strength']
+# Yonghyun's B1 data
+B1_data_raw = mr_io.load_single_mat(name=filename, path=path)['B1'] * 1e3
+# Create a 3D grid for the magnetic field data
+x_b1_raw = np.expand_dims(np.linspace(xlim[0], xlim[1], B1_data_raw.shape[1]), axis=0)
+y_b1_raw = np.expand_dims(np.linspace(ylim[0], ylim[1], B1_data_raw.shape[2]), axis=0)
+z_b1_raw = np.expand_dims(np.linspace(zlim[0], zlim[1], B1_data_raw.shape[3]), axis=0)
+B1_coords = np.concatenate((x_b1_raw, y_b1_raw, z_b1_raw), axis=0)
+
+# Anja's B1 data
+# B1_coords = mr_io.load_single_mat(name='glr_plane_field_coords', path=path)['field_coords'] * 1e3
+# B1_data_raw = mr_io.load_single_mat(name='glr_plane_field_strength', path=path)['field_strength']
 
 B1_data, x_b1_raw, y_b1_raw, z_b1_raw = algb.vec2mesh(B1_data_raw, B1_coords[0, :], B1_coords[1, :],
-                                                      B1_coords[2, :], empty_val=0)
+                                                      B1_coords[2, :], empty_val=0.0001)
 
 # vis.scatter3d(x_b1_raw, y_b1_raw, z_b1_raw, grad=np.linalg.norm(B1_data, axis=0), title='B1 raw', xlim=xlim, ylim=ylim,
 #               zlim=zlim)
@@ -76,8 +84,9 @@ breast_mask = mk.gen_breast_mask(X_axis, Y_axis, Z_axis, R=R, height=height, bre
 phantom = mk.gen_breast_mask(X_axis, Y_axis, Z_axis, R=R - 20, height=height, breast_loc=breast_loc.copy(),
                              tkns=coil_tkns,
                              chest_dim=chest_dim)
-vis.scatter3d(X_axis, Y_axis, Z_axis, phantom, title='Phantom in Breast Mask', mask=breast_mask, xlim=xlim, ylim=ylim,
-              zlim=zlim)
+vis.scatter3d(X_axis, Y_axis, Z_axis, phantom, title='Phantom in Breast Mask', mask=breast_mask, xlim=xlim,
+              ylim=ylim, zlim=zlim)
+vis.show_all_plots()
 
 # %% slice selection
 # Constants
@@ -102,13 +111,17 @@ LR_cut = (X_M > -3) & (X_M < 3)
 # Visualize
 vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(B0_polar, axis=0), xlim=xlim, ylim=ylim, zlim=zlim, mask=slice,
               title='B0 (mT)')
+vis.show_all_plots()
 vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(B0_polar, axis=0), xlim=xlim, ylim=ylim, zlim=zlim, mask=SI_cut,
               title='B0 (mT)')
+vis.show_all_plots()
 
 vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(B1_raw, axis=0), xlim=xlim, ylim=ylim, zlim=zlim, mask=slice,
               title='B1 (mT)')
+vis.show_all_plots()
 vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(B1_raw, axis=0), xlim=xlim, ylim=ylim, zlim=zlim, mask=SI_cut,
               title='B1 (mT)')
+vis.show_all_plots()
 
 # %% effective B1
 # B1_eff = np.zeros((3, intrp_x, intrp_y, intrp_z))
@@ -163,6 +176,7 @@ flip_angle_deg = B1_eff_amp / np.mean(B1_eff_amp) * 90
 
 vis.scatter3d(X_axis, Y_axis, Z_axis, flip_angle_deg, xlim=xlim, ylim=ylim, zlim=zlim,
               title='Flip Angle', mask=VOI)
+vis.show_all_plots()
 
 # Excite
 flip_angle_rad = np.deg2rad(flip_angle_deg)
@@ -185,11 +199,14 @@ M = P.forward(O)
 
 vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(M, axis=0), xlim=xlim, ylim=ylim, zlim=zlim, title='Magnetization',
               mask=VOI)
+vis.show_all_plots()
 
 # Excited Magnetization
 M_excited = E.forward(M)
 vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(M_excited, axis=0), xlim=xlim, ylim=ylim, zlim=zlim,
               title='Excited Magnetization', mask=VOI)
+
+vis.show_all_plots()
 
 # Measured Signal
 
