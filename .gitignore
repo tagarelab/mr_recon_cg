@@ -4,6 +4,7 @@ admm_l1_bkup.ipnyb
 # Heng's ignores
 *.tnt
 *.mat
+*.csv
 
 data/
 .ipynb_checkpoints/
