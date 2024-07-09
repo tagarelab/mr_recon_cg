@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 from skimage.data import shepp_logan_phantom
 from skimage.transform import resize
 import scipy.io as sio
-import matplotlib.pyplot as plt
 import numpy as np
 
 # GG: Script used to test forward and backward operators for eventual use in class epi_op
@@ -16,8 +15,8 @@ Sim['RO_t_tot'] = 0.001  # seconds, echo DURATION!!!
 Sim['PE_t_1blip'] = 0.0002
 Sim['FOV'] = 0.2  # meters
 Sim['B0map_filename'] = 'B0map_rand.mat'
-Sim['SimRes'] = 32  # resolution of phantom (square); also size(Atrans(y))
-Sim['ImgRes'] = Sim['SimRes']  # size of data, sets acq pars, Nyquist sampling etc
+Sim['SimRes'] = 64  # resolution of phantom (square); also size(Atrans(y))
+Sim['ImgRes'] = 32  # size of data, sets acq pars, Nyquist sampling etc
 Sim['Noise'] = 0  # not added to code yet
 
 if Sim['SimRes'] < Sim['ImgRes']:
@@ -29,7 +28,7 @@ phantom = shepp_logan_phantom()
 phantom_resized = resize(phantom, (Sim['SimRes'], Sim['SimRes']), mode='reflect', anti_aliasing=True)
 
 # Optional line for a new random polynomial
-#gg_lib.make_b0_poly(Sim['SimRes'])  # For now, random polynomial of the right size
+gg_lib.make_b0_poly(Sim['SimRes'])  # For now, random polynomial of the right size
 
 # Load the SimB0map
 SimB0map_data = sio.loadmat(Sim['B0map_filename'])
