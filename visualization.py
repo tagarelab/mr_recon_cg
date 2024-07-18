@@ -415,5 +415,6 @@ def complex(signal, name=None, rect=True, ylim=None, xlabel=None, ylabel=None):
 
     set_limit_title(title=name, ylim=ylim, xlabel=xlabel, ylabel=ylabel)
     plt.legend()
+    plt.show()
 
     return fig

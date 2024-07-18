@@ -13,12 +13,37 @@ import matplotlib.pyplot as plt
 import visualization as vis
 
 # %% load data
-file_name = 'GLR_0_rftime80us_90ampl_3.6_200pts_full_comb_07032024.mat'
-mat_file = sp.io.loadmat('sim_output/' + file_name)
-# data = mat_file['data']
-raw_sig_all = mat_file['raw_sig_all']
-comb_sig_all = mat_file['comb_sig_all']
+file_name = 'FirstTryPE#_comb_07082024'
+mat_file = sp.io.loadmat('sim_output/' + file_name + '.mat')
+sig_comb = mat_file['comb_sig_all']
+sig_raw = mat_file['raw_sig_all']
 
-ylim = [0,15000]
-vis.absolute(raw_sig_all[0:1000], name="Raw Data",ylim=ylim)
-vis.absolute(comb_sig_all[0:1000], name="Comb Data",ylim=ylim)
+
+# %% get averaged signal
+def avg_first_k_peaks(signal, echo_len, k=10):
+    echoes = np.zeros((k, echo_len), dtype='complex')
+    for i in range(k):
+        echo = signal[i * echo_len:(i + 1) * echo_len]
+        echoes[i, :] = np.squeeze(echo)
+    return np.mean(echoes, axis=0)
+
+
+for data in [sig_raw, sig_comb]:
+    echo_len = int(data.shape[0] / 720)
+    sig_avg = np.zeros([echo_len, data.shape[1]], dtype='complex')
+
+    for i in range(data.shape[1]):
+        sig_avg[:, i] = avg_first_k_peaks(data[:, i], echo_len, k=10)
+
+    # %% plot data
+    plt.figure()
+    plt.imshow(np.abs(sig_avg), aspect='auto')
+    plt.colorbar()
+    plt.title('K space')
+    plt.show()
+
+    plt.figure()
+    plt.imshow(np.abs(np.fft.fftshift(np.fft.fft2(sig_avg))), aspect='auto')
+    plt.colorbar()
+    plt.title('Image space')
+    plt.show()

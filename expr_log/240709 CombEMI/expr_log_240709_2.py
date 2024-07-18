@@ -30,18 +30,20 @@ def avg_first_k_peaks(signal, echo_len, k=10):
 
 
 # %% Load raw data
-file_name = "FirstTryPE#"
+file_name = 'Step_10_Coil_Everything_Pol_Phantom_withPol_Phant_16avg'
+# file_name = 'Step_9_Coil_Everything_Pol_withPol_noPhant_16avg'
 mat_file = sp.io.loadmat('sim_input/' + file_name + '.mat')
-raw_sig_all = mat_file['ch1']
+raw_sig_all = mat_file['ch2']
+raw_sig_all = raw_sig_all[1020000:, :]
 comb_sig_all = np.zeros(raw_sig_all.shape, dtype='complex')
 
 # %% Data parameters
-N_echoes = 720
-TE = 1.5e-3
-dt = 6e-6
+N_echoes = 480
+TE = 2e-3
+dt = 5e-6
 pre_drop = 0
 post_drop = 0
-pk_win = 0.4
+pk_win = 0.33
 pk_id = None  # None for auto peak detection
 polar_period = 0
 polar_time = dt * polar_period
@@ -55,7 +57,7 @@ max_iter = 200
 rho = 1
 lambda_val = -1  # -1 for auto regularization
 # auto lambda parameters
-ft_prtct = 2
+ft_prtct = 1
 echo_len = int((raw_sig_all.shape[0] - polar_period) / N_echoes)
 
 # %% Process data
@@ -96,7 +98,7 @@ for i in [0]:
         vis.freq_plot(raw_sig[polar_period:polar_period + echo_len], dt=dt, name='Raw Sig', ylim=ylim_freq)
         vis.freq_plot(comb[polar_period:polar_period + echo_len], dt=dt, name='Comb Cancelled Result', ylim=ylim_freq)
 
-        k = 1
+        k = 10
         vis.freq_plot(avg_first_k_peaks(raw_sig[polar_period:], echo_len, k=k), dt=dt,
                       name="Raw Sig, Avg of First %d Peaks" % k,
                       ylim=ylim_freq)

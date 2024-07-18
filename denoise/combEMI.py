@@ -17,6 +17,7 @@ from skimage.transform import radon, iradon
 import visualization as vis
 from optlib import c_grad as cg
 from optlib import operators as op
+import validation as val
 
 
 # %%
@@ -317,6 +318,34 @@ def admm_l2_l1(A, b, x0, l1_wt=1.0, rho=1.0, iter_max=100, eps=1e-2):
     return xk, steps < iter_max
 
 
+# %% Generate all masks
+def gen_masks(acq_len, N_echoes, TE, pk_id, polar_time, post_polar_gap_time, dt, pk_win, pre_drop=0,
+              post_drop=0):
+    # Set binary mask for sampling window
+    TE_len = np.uint16(TE / dt)
+    # rep_len = signal_te.shape[0]
+    # acq_len = np.uint16(rep_len / N_echoes)
+
+    # Pick out the peak location
+    sig_len_hf = np.uint16((acq_len - pre_drop - post_drop) * pk_win / 2)
+    if pk_id == "mid":
+        pk_id = np.uint16((acq_len - pre_drop - post_drop) / 2)
+    # elif pk_id is None:  # use input ID if otherwise
+    #     pks = np.abs(np.reshape(signal_te, (N_echoes, -1)))
+    #     pks[:pre_drop, :] = 0  # sometimes there's a leak of signal at the beginning
+    #     pks_val, pks_id = np.max(pks, axis=1), np.argmax(pks, axis=1)
+    #     max_pks_id = np.argpartition(pks_val, -10)[-10:]
+    #     pk_id = np.uint16(np.mean(pks_id[max_pks_id]))
+    #     print("Auto-detected peak location: %d" % pk_id)
+
+    # Generate masks
+    noi_all = gen_noi_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt)
+    sig_all = gen_sig_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt)
+    samp_all = gen_samp_mask(acq_len, N_echoes, TE_len, polar_time, post_polar_gap_time, dt)
+
+    return noi_all, sig_all, samp_all
+
+
 # %% Define comb_optimized: the noise cancellation function
 def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop, post_drop, pk_win,
                    pk_id=None, polar_time=0, post_polar_gap_time=0, rho=1.0, ft_prtct=5, Disp_Intermediate=False,
@@ -455,13 +484,29 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop
                                    method="conj_grad_l1_reg", rho=rho)
         if Disp_Intermediate:
             vis.freq_plot(emi_prdct, dt=dt, name='EMI pred lambda = %10.3E' % lambda_val)
+        # if Disp_Intermediate:
+        #     temp = emi_prdct[samp_all]
+        #     vis.complex(temp[:120], name='Subtracted Signal in time domain, first 120')
+        #     vis.complex(emi_prdct_tot[:120], name='Total Subtracted Signal before this step in time domain, first 120')
         emi_prdct_tot += emi_prdct
+
         zfilled_data[samp_all] = zfilled_data[samp_all] - emi_prdct[samp_all]
         if Disp_Intermediate:
             vis.freq_plot(np.where(samp_all, zfilled_data, 0), dt=dt, name='Raw Signal (without Comb Shaped Mask)',
                           ylim=ylim_freq)
             vis.freq_plot(np.where(noi_all, zfilled_data, 0), dt=dt, name='Comb input',
                           ylim=ylim_freq)
+            vis.complex(zfilled_data[0:120], name='Time domain')
+
+        # if val.is_white_noise(zfilled_data[noi_all]):
+        if val.is_white_noise(np.where(noi_all, zfilled_data, 0)):
+            break
+
+        # I added this line to prevent the gaps between each TE to carry a value - this should not affect the result
+        # but just in case
+        zfilled_data = np.where(samp_all, zfilled_data, 0)
+
+        # update lambda
         lambda_val = auto_lambda(np.where(noi_all, zfilled_data, 0), rho, lambda_default=lambda_val,
                                  ft_prtct=ft_prtct, Disp_Intermediate=Disp_Intermediate)
 
