@@ -30,19 +30,19 @@ def avg_first_k_peaks(signal, echo_len, k=10):
 
 
 # %% Load raw data
-file_name = "ThirdTryPE#"
+file_name = "Noisy_Sig_"
 mat_file = sp.io.loadmat('sim_input/' + file_name + '.mat')
 raw_sig_all = mat_file['ch1']
 comb_sig_all = np.zeros(raw_sig_all.shape, dtype='complex')
 
 # %% Data parameters
-N_echoes = 120
-TE = 3.5e-3
-dt = 6e-6
+N_echoes = 480
+TE = 2e-3
+dt = 5e-6
 pre_drop = 0
 post_drop = 0
-pk_win = 0.33
-pk_id = 58  # None for auto peak detection
+pk_win = 0.3
+pk_id = "mid"  # None for auto peak detection
 polar_period = 0
 polar_time = dt * polar_period
 post_polar_gap_time = 0
@@ -54,16 +54,15 @@ post_polar_gap_time = 0
 max_iter = 200
 rho = 1
 lambda_val = -1  # -1 for auto regularization
-auto_corr_tol = 0.1
 # auto lambda parameters
-ft_prtct = 2
+ft_prtct = 5
 echo_len = int((raw_sig_all.shape[0] - polar_period) / N_echoes)
 
 # %% Process data
 
-# for i in range(raw_sig_all.shape[1]):
-for i in [33]:
-    print('Processing Repetition #', i+1, " out of ", raw_sig_all.shape[1])
+for i in range(raw_sig_all.shape[1]):
+# for i in [0]:
+    print('Processing Repetition #', i, " out of ", raw_sig_all.shape[1])
 
     raw_sig = np.squeeze(raw_sig_all[:, i])
     if Disp_Intermediate:
@@ -77,10 +76,11 @@ for i in [33]:
                                            pk_win=pk_win, pk_id=pk_id,
                                            polar_time=polar_time, post_polar_gap_time=post_polar_gap_time, rho=rho,
                                            ft_prtct=ft_prtct, Disp_Intermediate=Disp_Intermediate,
-                                           ylim_time=ylim_time, ylim_freq=ylim_freq_zfilled, auto_corr_tol=auto_corr_tol)
+                                           ylim_time=ylim_time, ylim_freq=ylim_freq_zfilled)
 
     samp_mask_w_pol = cs.gen_samp_mask(acq_len=echo_len, N_echoes=N_echoes, TE_len=np.uint16(TE / dt),
-                                       polar_time=polar_time, post_polar_gap_time=post_polar_gap_time, dt=dt, pol=True)
+                                       polar_time=polar_time, post_polar_gap_time=post_polar_gap_time, dt=dt,
+                                       pol=True, pre_drop=pre_drop, post_drop=post_drop)
     cancelled_comb = cancelled_comb_raw[samp_mask_w_pol]
 
     if Disp_Intermediate:
@@ -97,7 +97,7 @@ for i in [33]:
         vis.freq_plot(raw_sig[polar_period:polar_period + echo_len], dt=dt, name='Raw Sig', ylim=ylim_freq)
         vis.freq_plot(comb[polar_period:polar_period + echo_len], dt=dt, name='Comb Cancelled Result', ylim=ylim_freq)
 
-        k = 100
+        k = 1
         vis.freq_plot(avg_first_k_peaks(raw_sig[polar_period:], echo_len, k=k), dt=dt,
                       name="Raw Sig, Avg of First %d Peaks" % k,
                       ylim=ylim_freq)

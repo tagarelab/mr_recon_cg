@@ -11,7 +11,8 @@ import scipy as sp
 import matplotlib.pyplot as plt
 
 # %% load data
-file_name = 'ThirdTryPE#_comb_07182024'
+# file_name = 'FourthTryPE#_comb_07232024'
+file_name = 'FourthTryPE#_comb_2_07232024'
 mat_file = sp.io.loadmat('sim_output/' + file_name + '.mat')
 comb_data = mat_file['comb_sig_all']
 raw_data = mat_file['raw_sig_all']
@@ -32,30 +33,32 @@ def avg_first_k_peaks(signal, echo_len, k=10):
 
 
 echo_len = 100
-k_list = [1, 5, 10, 50, 120]
+k_list = [1,10,30,60]
 # k_list = [1]
 
 # %% plot k space and image space
-# for j in range(len(data_names)):
-#     data = data_list[j]
-#     sig_avg = np.zeros([echo_len, data.shape[1]], dtype='complex')
-#
-#     for i in range(data.shape[1]):
-#         sig_avg[:, i] = avg_first_k_peaks(data[:, i], echo_len, k=10)
-#
-#     # plot data
-#     plt.figure()
-#     plt.imshow(np.abs(sig_avg), aspect='auto')
-#     plt.colorbar()
-#     plt.title('%s K Space'%data_names[j])
-#     plt.show()
-#
-#     plt.figure()
-#     plt.imshow(np.abs(np.fft.fftshift(np.fft.fft2(sig_avg))), aspect='auto')
-#     plt.colorbar()
-#     plt.title('Image Space')
-#     plt.clim(0, 6e5)
-#     plt.show()
+for j in range(len(data_names)):
+    data = data_list[j]
+    sig_avg = np.zeros([echo_len, data.shape[1]], dtype='complex')
+
+    for i in range(data.shape[1]):
+        sig_avg[:, i] = avg_first_k_peaks(data[:, i], echo_len, k=1)
+
+
+    # sig_avg = sig_avg[5:, :]
+    # plot data
+    plt.figure()
+    plt.imshow(np.abs(sig_avg), aspect='equal')
+    plt.colorbar()
+    plt.title('%s K Space'%data_names[j])
+    plt.show()
+
+    plt.figure()
+    plt.imshow(np.abs(np.fft.ifftshift(np.fft.ifft2(sig_avg))), aspect='equal')
+    plt.colorbar()
+    plt.title('Image Space')
+    plt.clim(0, 100)
+    plt.show()
 
 # %% compare
 # v_max_list = [3e2,1e2,8e1,5e1,3e1]
@@ -70,6 +73,7 @@ for k in k_list:
         for i in range(data.shape[1]):
             sig_avg[:, i] = avg_first_k_peaks(data[:, i], echo_len, k=k)
 
+        sig_avg = sig_avg[5:, :]
         image = np.fft.ifftshift(np.fft.ifft2(sig_avg))
         # image = np.fft.fftshift(np.fft.fft2())
 
@@ -79,7 +83,9 @@ for k in k_list:
         # plt.plot(np.real(np.sum(image, axis=1)), label='Real')
         # plt.plot(np.imag(np.sum(image, axis=1)), label='Imag')
         plt.title(data_names[j])
-        plt.clim(0, v_max_list[k_list.index(k)])
+        # plt.colorbar()
+        # plt.clim(0, v_max_list[k_list.index(k)])
+        plt.clim(0, 100)
 
     plt.suptitle('Average %d Echoes'%k)
     plt.show()

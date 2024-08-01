@@ -320,7 +320,7 @@ def admm_l2_l1(A, b, x0, l1_wt=1.0, rho=1.0, iter_max=100, eps=1e-2):
 
 # %% Generate all masks
 def gen_masks(acq_len, N_echoes, TE, pk_id, polar_time, post_polar_gap_time, dt, pk_win, pre_drop=0,
-              post_drop=0):
+              post_drop=0, signal_te=None):
     # Set binary mask for sampling window
     TE_len = np.uint16(TE / dt)
     # rep_len = signal_te.shape[0]
@@ -330,18 +330,19 @@ def gen_masks(acq_len, N_echoes, TE, pk_id, polar_time, post_polar_gap_time, dt,
     sig_len_hf = np.uint16((acq_len - pre_drop - post_drop) * pk_win / 2)
     if pk_id == "mid":
         pk_id = np.uint16((acq_len - pre_drop - post_drop) / 2)
-    # elif pk_id is None:  # use input ID if otherwise
-    #     pks = np.abs(np.reshape(signal_te, (N_echoes, -1)))
-    #     pks[:pre_drop, :] = 0  # sometimes there's a leak of signal at the beginning
-    #     pks_val, pks_id = np.max(pks, axis=1), np.argmax(pks, axis=1)
-    #     max_pks_id = np.argpartition(pks_val, -10)[-10:]
-    #     pk_id = np.uint16(np.mean(pks_id[max_pks_id]))
-    #     print("Auto-detected peak location: %d" % pk_id)
+        print("Use middle point as peak location: %d" % pk_id)
+    elif pk_id is None:  # use input ID if otherwise
+        pks = np.abs(np.reshape(signal_te, (N_echoes, -1)))
+        pks[:pre_drop, :] = 0  # sometimes there's a leak of signal at the beginning
+        pks_val, pks_id = np.max(pks, axis=1), np.argmax(pks, axis=1)
+        max_pks_id = np.argpartition(pks_val, -10)[-10:]
+        pk_id = np.uint16(np.mean(pks_id[max_pks_id]))
+        print("Auto-detected peak location: %d" % pk_id)
 
     # Generate masks
-    noi_all = gen_noi_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt)
-    sig_all = gen_sig_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt)
-    samp_all = gen_samp_mask(acq_len, N_echoes, TE_len, polar_time, post_polar_gap_time, dt)
+    noi_all = gen_noi_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt, pre_drop, post_drop)
+    sig_all = gen_sig_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt, pre_drop, post_drop)
+    samp_all = gen_samp_mask(acq_len, N_echoes, TE_len, polar_time, post_polar_gap_time, dt, pre_drop, post_drop)
 
     return noi_all, sig_all, samp_all
 
@@ -349,7 +350,7 @@ def gen_masks(acq_len, N_echoes, TE, pk_id, polar_time, post_polar_gap_time, dt,
 # %% Define comb_optimized: the noise cancellation function
 def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop, post_drop, pk_win,
                    pk_id=None, polar_time=0, post_polar_gap_time=0, rho=1.0, ft_prtct=5, Disp_Intermediate=False,
-                   ylim_time=None, ylim_freq=None):
+                   ylim_time=None, ylim_freq=None, auto_corr_tol=None):
     """
     Comb noise self-correction method
 
@@ -385,24 +386,27 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop
 
     # Auto peak recognition to create comb
 
-    # Pick out the peak location
-    sig_len_hf = np.uint16((acq_len - pre_drop - post_drop) * pk_win / 2)
+    noi_all, sig_all, samp_all = gen_masks(acq_len, N_echoes, TE, pk_id, polar_time, post_polar_gap_time, dt, pk_win,
+                                         pre_drop=pre_drop, post_drop=post_drop, signal_te=signal_te)
 
-    if pk_id is None:  # use input ID if otherwise
-        if pk_id == "mid":
-            pk_id = np.uint16((acq_len - pre_drop - post_drop) / 2)
-        else:
-            pks = np.abs(np.reshape(signal_te, (N_echoes, -1)))
-            pks[:pre_drop, :] = 0  # sometimes there's a leak of signal at the beginning
-            pks_val, pks_id = np.max(pks, axis=1), np.argmax(pks, axis=1)
-            max_pks_id = np.argpartition(pks_val, -10)[-10:]
-            pk_id = np.uint16(np.mean(pks_id[max_pks_id]))
-        print("Auto-detected peak location: %d" % pk_id)
-
-    # Generate masks
-    noi_all = gen_noi_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt)
-    sig_all = gen_sig_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt)
-    samp_all = gen_samp_mask(acq_len, N_echoes, TE_len, polar_time, post_polar_gap_time, dt)
+    # # Pick out the peak location
+    # sig_len_hf = np.uint16((acq_len - pre_drop - post_drop) * pk_win / 2)
+    #
+    # if pk_id is None:  # use input ID if otherwise
+    #     if pk_id == "mid":
+    #         pk_id = np.uint16((acq_len - pre_drop - post_drop) / 2)
+    #     else:
+    #         pks = np.abs(np.reshape(signal_te, (N_echoes, -1)))
+    #         pks[:pre_drop, :] = 0  # sometimes there's a leak of signal at the beginning
+    #         pks_val, pks_id = np.max(pks, axis=1), np.argmax(pks, axis=1)
+    #         max_pks_id = np.argpartition(pks_val, -10)[-10:]
+    #         pk_id = np.uint16(np.mean(pks_id[max_pks_id]))
+    #     print("Auto-detected peak location: %d" % pk_id)
+    #
+    # # Generate masks
+    # noi_all = gen_noi_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt)
+    # sig_all = gen_sig_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt)
+    # samp_all = gen_samp_mask(acq_len, N_echoes, TE_len, polar_time, post_polar_gap_time, dt)
 
     # Signal (echo peak) part only
     # sig_1Echo = np.zeros(acq_len, dtype=bool)
@@ -488,7 +492,7 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop
         #     temp = emi_prdct[samp_all]
         #     vis.complex(temp[:120], name='Subtracted Signal in time domain, first 120')
         #     vis.complex(emi_prdct_tot[:120], name='Total Subtracted Signal before this step in time domain, first 120')
-        emi_prdct_tot += emi_prdct
+
 
         zfilled_data[samp_all] = zfilled_data[samp_all] - emi_prdct[samp_all]
         if Disp_Intermediate:
@@ -496,10 +500,10 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop
                           ylim=ylim_freq)
             vis.freq_plot(np.where(noi_all, zfilled_data, 0), dt=dt, name='Comb input',
                           ylim=ylim_freq)
-            vis.complex(zfilled_data[0:120], name='Time domain')
+            vis.complex(zfilled_data[:acq_len], name='Time domain')
 
         # if val.is_white_noise(zfilled_data[noi_all]):
-        if val.is_white_noise(np.where(noi_all, zfilled_data, 0)):
+        if val.is_white_noise(np.where(noi_all, zfilled_data, 0), tol=auto_corr_tol):
             break
 
         # I added this line to prevent the gaps between each TE to carry a value - this should not affect the result
@@ -509,7 +513,8 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop
         # update lambda
         lambda_val = auto_lambda(np.where(noi_all, zfilled_data, 0), rho, lambda_default=lambda_val,
                                  ft_prtct=ft_prtct, Disp_Intermediate=Disp_Intermediate)
-
+        # update total predicted EMI
+        emi_prdct_tot += emi_prdct
     result = emi_prdct_tot
 
     return result
@@ -571,24 +576,35 @@ def gen_pol_mask(N_echoes, TE_len, polar_time, post_polar_gap_time, dt):
     return noi_all.astype(bool)
 
 
-def gen_sig_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt):
+def gen_drop(seg_1Echo, pre_drop=0, post_drop=0):
+    if pre_drop != 0:
+        seg_1Echo[:pre_drop] = 0
+    if post_drop != 0:
+        seg_1Echo[-post_drop:] = 0
+    return seg_1Echo
+
+
+def gen_sig_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt, pre_drop, post_drop):
     sig_1Echo = np.zeros(acq_len, dtype=bool)
     sig_1Echo[max(0, pk_id - sig_len_hf):min(pk_id + sig_len_hf, acq_len)] = 1
+    sig_1Echo = gen_drop(sig_1Echo, pre_drop, post_drop)
     sig_all = np.tile(np.concatenate([sig_1Echo, np.zeros(TE_len - acq_len, dtype=bool)]), N_echoes)
     sig_all = add_polarization(sig_all, polar_time, post_polar_gap_time, dt, value=0, type=bool)
     return sig_all.astype(bool)
 
 
-def gen_noi_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt):
+def gen_noi_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt, pre_drop, post_drop):
     noi_1Echo = np.ones(acq_len, dtype=bool)
     noi_1Echo[max(0, pk_id - sig_len_hf):min(pk_id + sig_len_hf, acq_len)] = 0
+    noi_1Echo = gen_drop(noi_1Echo, pre_drop, post_drop)
     noi_all = np.tile(np.concatenate([noi_1Echo, np.zeros(TE_len - acq_len, dtype=bool)]), N_echoes)
     noi_all = add_polarization(noi_all, polar_time, post_polar_gap_time, dt, value=1, type=bool)
     return noi_all.astype(bool)
 
 
-def gen_samp_mask(acq_len, N_echoes, TE_len, polar_time, post_polar_gap_time, dt, pol=False):
+def gen_samp_mask(acq_len, N_echoes, TE_len, polar_time, post_polar_gap_time, dt, pre_drop, post_drop, pol=False):
     samp_1Echo = np.concatenate([np.ones(acq_len, dtype=bool), np.zeros(TE_len - acq_len, dtype=bool)])
+    samp_1Echo = gen_drop(samp_1Echo, pre_drop, post_drop)
     samp_all = np.tile(samp_1Echo, N_echoes)
     samp_all = add_polarization(samp_all, polar_time, post_polar_gap_time, dt, value=pol, type=bool)
     return samp_all.astype(bool)
