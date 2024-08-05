@@ -22,6 +22,7 @@ import validation as val
 
 # %%
 ## Define supporting functions
+
 def freq_axis(N, dt):
     freq_axis = sp.fft.fftshift(sp.fft.fftfreq(N, dt))
     return freq_axis
@@ -350,7 +351,7 @@ def gen_masks(acq_len, N_echoes, TE, pk_id, polar_time, post_polar_gap_time, dt,
 # %% Define comb_optimized: the noise cancellation function
 def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop, post_drop, pk_win,
                    pk_id=None, polar_time=0, post_polar_gap_time=0, rho=1.0, ft_prtct=5, Disp_Intermediate=False,
-                   ylim_time=None, ylim_freq=None, auto_corr_tol=None):
+                   ylim_time=None, ylim_freq=None, auto_corr_tol=None, method="conj_grad_l1_reg"):
     """
     Comb noise self-correction method
 
@@ -485,7 +486,7 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop
     while lambda_val > 0:
         emi_prdct = sn_recognition(signal=zfilled_data, mask=input_mask, lambda_val=lambda_val, tol=tol,
                                    max_iter=max_iter,
-                                   method="conj_grad_l1_reg", rho=rho)
+                                   method=method, rho=rho)
         if Disp_Intermediate:
             vis.freq_plot(emi_prdct, dt=dt, name='EMI pred lambda = %10.3E' % lambda_val)
         # if Disp_Intermediate:
@@ -504,6 +505,7 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop
 
         # if val.is_white_noise(zfilled_data[noi_all]):
         if val.is_white_noise(np.where(noi_all, zfilled_data, 0), tol=auto_corr_tol):
+            print("Reached White Noise")
             break
 
         # I added this line to prevent the gaps between each TE to carry a value - this should not affect the result
@@ -537,11 +539,13 @@ def auto_lambda(signal, rho, lambda_default=np.inf, tol=None, cvg=0.99, ft_prtct
 
     lambda_val = np.max(np.abs(np.fft.fft(signal))) * rho * tol[0]
     lower_bound = np.median(np.abs(np.fft.fft(signal))) * rho * ft_prtct
-    if lambda_val > lower_bound and lambda_val < lambda_default * cvg:
-        # if lambda_val > lower_bound:
-        if Disp_Intermediate:
-            print("Lower bound: ", lower_bound)
-            print("Auto lambda: ", lambda_val)
+
+    if Disp_Intermediate:
+        print("Lower bound: ", lower_bound)
+        print("Auto lambda: ", lambda_val)
+
+    # if lambda_val > lower_bound and lambda_val < lambda_default * cvg:
+    if lambda_val > lower_bound:
         return lambda_val
     # elif lambda_val/tol[0]*tol[1] > lower_bound:
     #     print("Auto lambda set to lower bound: ", lower_bound)
@@ -614,18 +618,18 @@ def gen_samp_mask(acq_len, N_echoes, TE_len, polar_time, post_polar_gap_time, dt
 def sn_recognition(signal, mask, lambda_val, tol=0.1, max_iter=100, method="conj_grad_l1_reg", rho=1.0):
     # mask_matrix = np.fft.fft(np.eye(len(signal)))[mask, :]
     # y = np.multiply(mask, signal)
+    # print("ADMM with L1 regularization + Conjugate Gradient")
+    mask_id = np.where(mask)
+    S = selection_op(signal.shape, mask_id)
+    F = ifft_op()
+    A = op.composite_op(S, F)
+    # x0 = np.zeros_like(signal)
+    x0 = peaks_only(F.transpose(signal))
+    y = S.forward(signal)
+    # visualization.complex(x0, name="Initial guess")
+    # visualization.complex(signal, "input signal")
+    # visualization.complex(mask, "input mask")
     if method == "conj_grad_l1_reg":
-        # print("ADMM with L1 regularization + Conjugate Gradient")
-        mask_id = np.where(mask)
-        S = selection_op(signal.shape, mask_id)
-        F = ifft_op()
-        A = op.composite_op(S, F)
-        # x0 = np.zeros_like(signal)
-        x0 = peaks_only(F.transpose(signal))
-        y = S.forward(signal)
-        # visualization.complex(x0, name="Initial guess")
-        # visualization.complex(signal, "input signal")
-        # visualization.complex(mask, "input mask")
         sn_prdct, admm_flag = admm_l2_l1(A=A, b=y, x0=x0, l1_wt=lambda_val, rho=rho,
                                          iter_max=max_iter,
                                          eps=tol)
@@ -633,24 +637,25 @@ def sn_recognition(signal, mask, lambda_val, tol=0.1, max_iter=100, method="conj
 
         # if not admm_flag:
         #     print("Step limit reached at ADMM.")
-
-        # visualization.plot_against_frequency(sn_prdct, len(sn_prdct), 1e-5, "EMI prediction in frequency domain")
-
-        H = op.hadamard_op(np.abs(sn_prdct) > 1e-1 * np.max(np.abs(sn_prdct)))
-        A = op.composite_op(S, F, H)
-        sn_prdct, cg_flag = cg.solve_lin_cg(y, A, sn_prdct, B=op.scalar_prod_op(0.05), max_iter=10)
-
-        # if not cg_flag:
-        #     print("Step limit reached at CG for amplitude.")
-
-        # visualization.plot_against_frequency(sn_prdct, len(sn_prdct), 1e-5, "EMI prediction in frequency domain")
-
-        sn_prdct = F.forward(sn_prdct)
-
-        # visualization.complex(sn_prdct, name="EMI prediction in time domain")
-
+    elif method == "peak_pick":
+        sn_prdct = peaks_only(F.transpose(np.where(mask, signal, 0)))
     else:
         print("Invalid optimization method.")
+
+    # visualization.plot_against_frequency(sn_prdct, len(sn_prdct), 1e-5, "EMI prediction in frequency domain")
+
+    H = op.hadamard_op(np.abs(sn_prdct) > 1e-1 * np.max(np.abs(sn_prdct)))
+    A = op.composite_op(S, F, H)
+    sn_prdct, cg_flag = cg.solve_lin_cg(y, A, sn_prdct, B=op.scalar_prod_op(0.05), max_iter=10)
+
+    # if not cg_flag:
+    #     print("Step limit reached at CG for amplitude.")
+
+    # visualization.plot_against_frequency(sn_prdct, len(sn_prdct), 1e-5, "EMI prediction in frequency domain")
+
+    sn_prdct = F.forward(sn_prdct)
+
+    # visualization.complex(sn_prdct, name="EMI prediction in time domain")
 
     return sn_prdct
 
@@ -666,7 +671,7 @@ def peaks_only(signal):
     - numpy.ndarray: Peaks.
     """
     peaks = np.zeros_like(signal)
-    peaks[np.argmax(signal)] = signal[np.argmax(signal)]
+    peaks[np.argmax(np.abs(signal))] = signal[np.argmax(np.abs(signal))]
     return peaks
 
 
