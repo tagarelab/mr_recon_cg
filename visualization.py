@@ -220,6 +220,14 @@ def sig_time(time, signal, xlabel='Time (s)', ylabel='Signal', title='Signal in 
     return fig
 
 
+def plot2d(x_data, y_data, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None):
+    fig = plt.figure()
+    plt.plot(x_data, y_data)
+    set_limit_title(title=title, xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim)
+    plt.show()
+    return fig
+
+
 def imshow(image, name=None):
     fig = plt.figure()
     plt.imshow(image, cmap='gray')
@@ -395,10 +403,10 @@ def freq_analysis(signal, frag_len, dt, name=None, type='heatmap'):
     return fig
 
 
-def absolute(signal, name=None, ylim=None):
+def absolute(signal, name=None, ylim=None, xlabel=None, ylabel=None):
     fig = plt.figure()
     plt.plot(np.abs(signal))
-    set_limit_title(title=name, ylim=ylim)
+    set_limit_title(title=name, ylim=ylim, xlabel=xlabel, ylabel=ylabel)
     plt.show()
     return fig
 

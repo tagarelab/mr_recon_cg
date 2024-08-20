@@ -30,15 +30,15 @@ def avg_first_k_peaks(signal, echo_len, k=10):
 
 
 # %% Load raw data
-file_name = "ThirdTryPE#"
+file_name = "SeventhTryAve#1PE#"
 mat_file = sp.io.loadmat('sim_input/' + file_name + '.mat')
-raw_sig_all = mat_file['ch1']
+raw_sig_all = mat_file['ch2']
 comb_sig_all = np.zeros(raw_sig_all.shape, dtype='complex')
 
 # %% Data parameters
-N_echoes = 480
-TE = 2e-3
-dt = 5e-6
+N_echoes = 120
+TE = 3.5e-3
+dt = 6e-6
 pre_drop = 0
 post_drop = 0
 pk_win = 0.33
@@ -55,11 +55,9 @@ max_iter = 200
 rho = 1
 lambda_val = -1  # -1 for auto regularization
 auto_corr_tol = 0.1
-# method = "peak_pick"
-# method = "conj_grad_l1_reg"
-method = "j2_bounded"
+method = "peak_pick"
 # auto lambda parameters
-ft_prtct = 1
+ft_prtct = 5
 echo_len = int((raw_sig_all.shape[0] - polar_period) / N_echoes)
 
 # %% Process data

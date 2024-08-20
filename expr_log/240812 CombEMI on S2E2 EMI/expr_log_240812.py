@@ -30,15 +30,19 @@ def avg_first_k_peaks(signal, echo_len, k=10):
 
 
 # %% Load raw data
-file_name = "ThirdTryPE#"
+# file_name = 'Step_10_Coil_Everything_Pol_Phantom_withPol_Phant_16avg'
+file_name = 'Step_10_Coil_Everything_Pol_Phantom_withPol_Phant'
+# file_name = 'Step_9_Coil_Everything_Pol_withPol_noPhant_16avg'
+# file_name = 'Step_9_Coil_Everything_Pol_withPol_noPhant'
 mat_file = sp.io.loadmat('sim_input/' + file_name + '.mat')
-raw_sig_all = mat_file['ch1']
+raw_sig_all = mat_file['ch2']
+raw_sig_all = raw_sig_all[1020000:, :]
 comb_sig_all = np.zeros(raw_sig_all.shape, dtype='complex')
 
 # %% Data parameters
-N_echoes = 480
-TE = 2e-3
-dt = 5e-6
+N_echoes = 120
+TE = 3.5e-3
+dt = 6e-6
 pre_drop = 0
 post_drop = 0
 pk_win = 0.33
@@ -65,7 +69,7 @@ echo_len = int((raw_sig_all.shape[0] - polar_period) / N_echoes)
 # %% Process data
 
 # for i in range(raw_sig_all.shape[1]):
-for i in [33]:
+for i in [0]:
     print('Processing Repetition #', i + 1, " out of ", raw_sig_all.shape[1])
 
     raw_sig = np.squeeze(raw_sig_all[:, i])
@@ -88,12 +92,19 @@ for i in [33]:
                                        pol=True, pre_drop=pre_drop, post_drop=post_drop)
     cancelled_comb = cancelled_comb_raw[samp_mask_w_pol]
 
+    Disp_Intermediate = True
+
     if Disp_Intermediate:
         vis.complex(cancelled_comb_raw, name='Comb Raw Output', rect=True, ylim=ylim_time)
         vis.complex(cancelled_comb_raw[0:400], name='Comb Raw Output', rect=True, ylim=ylim_time)
         vis.freq_plot(cancelled_comb_raw, dt=dt, name='Comb Raw Output')
 
     comb = np.squeeze(raw_sig) - cancelled_comb
+
+    if Disp_Intermediate:
+        vis.freq_plot(cancelled_comb, dt=dt, name='Comb Sampled Output', ylim=ylim_freq_zfilled)
+        vis.freq_plot(np.squeeze(raw_sig), dt=dt, name='Sampled Raw', ylim=ylim_freq_zfilled)
+        vis.freq_plot(comb, dt=dt, name='Comb Sampled Cancelled Result', ylim=ylim_freq_zfilled)
 
     if Disp_Intermediate:
         vis.complex(comb, name='Comb Cancelled Result', rect=True, ylim=ylim_time)

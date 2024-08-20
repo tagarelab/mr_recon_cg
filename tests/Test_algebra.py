@@ -7,6 +7,8 @@
 """
 
 import unittest
+from unittest import TestCase
+
 import numpy as np
 import algebra
 import visualization as vis
@@ -115,3 +117,10 @@ class TestAlgebra(unittest.TestCase):
         x = np.array([[1 + 1.j, 2 + 2.j, 3 + 3.j], [4 + 4.j, 5 + 5.j, 6 + 6.j]])
         y = np.array([[1, 2, 3, 1, 2, 3], [4, 5, 6, 4, 5, 6]])
         np.testing.assert_array_equal(algebra.array2complex(y), x)
+
+    def test_normalized_cross_correlation(self):
+        """
+        Test the normalized_cross_correlation function
+        :return:
+        """
+        x = np.array([1, 2, 3, 4, 5])

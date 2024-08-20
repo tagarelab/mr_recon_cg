@@ -40,7 +40,7 @@ def normalized_cross_correlation(signal1, signal2, do_ifftshift=False):
     signal2 = np.asarray(signal2)
 
     # Compute the cross-correlation
-    cross_corr = sp.signal.correlate(signal1, signal2, mode='full')
+    cross_corr = sp.signal.correlate(signal1, signal2, mode='full')  # TODO: check this function -> boundry effect
 
     # fftshift the cross-correlation
     if do_ifftshift:

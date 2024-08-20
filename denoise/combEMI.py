@@ -341,11 +341,66 @@ def gen_masks(acq_len, N_echoes, TE, pk_id, polar_time, post_polar_gap_time, dt,
         print("Auto-detected peak location: %d" % pk_id)
 
     # Generate masks
-    noi_all = gen_noi_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt, pre_drop, post_drop)
-    sig_all = gen_sig_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt, pre_drop, post_drop)
+    noi_all = gen_noi_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt, pre_drop,
+                           post_drop)
+    sig_all = gen_sig_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt, pre_drop,
+                           post_drop)
     samp_all = gen_samp_mask(acq_len, N_echoes, TE_len, polar_time, post_polar_gap_time, dt, pre_drop, post_drop)
 
     return noi_all, sig_all, samp_all
+
+
+def find_peaks_above_median(signal, kernel_size=100, threshold_factor=1.5):
+    """
+    Find peaks in a complex signal that are above a range determined by the local median.
+    This function is drafted by GitHub Copilot and edited & tested by the author. #TODO: test this function
+
+    Parameters:
+    - signal (numpy.ndarray): Input complex signal.
+    - kernel_size (int): Size of the median filter kernel. Default is 3.
+    - threshold_factor (float): Factor to determine the threshold above the local median. Default is 1.5.
+
+    Returns:
+    - peaks (numpy.ndarray): Indices of the peaks.
+    - peak_values (numpy.ndarray): Values of the peaks.
+    """
+    # Ensure the signal is a numpy array
+    signal = np.asarray(signal)
+
+    # Compute the absolute value of the complex signal
+    abs_signal = np.abs(signal)
+
+    # Apply a median filter to the absolute value of the signal
+    median_filtered = sp.signal.medfilt(abs_signal, kernel_size=kernel_size)
+
+    # Determine the threshold above the local median
+    threshold = median_filtered * threshold_factor
+
+    # Identify segments where the signal is above the threshold
+    above_threshold = abs_signal > threshold
+
+    # Find the start and end indices of each segment
+    segments = []
+    start_idx = None
+    for i, is_above in enumerate(above_threshold):
+        if is_above and start_idx is None:
+            start_idx = i
+        elif not is_above and start_idx is not None:
+            segments.append((start_idx, i))
+            start_idx = None
+    if start_idx is not None:
+        segments.append((start_idx, len(abs_signal)))
+
+    # Find the peak within each segment
+    peaks = []
+    peak_values = []
+    for start, end in segments:
+        segment = abs_signal[start:end]
+        peak_idx = np.argmax(segment) + start
+        peaks.append(peak_idx)
+        peak_values.append(abs_signal[peak_idx])
+
+    return np.array(peaks), np.array(peak_values)
 
 
 # %% Define comb_optimized: the noise cancellation function
@@ -388,7 +443,7 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop
     # Auto peak recognition to create comb
 
     noi_all, sig_all, samp_all = gen_masks(acq_len, N_echoes, TE, pk_id, polar_time, post_polar_gap_time, dt, pk_win,
-                                         pre_drop=pre_drop, post_drop=post_drop, signal_te=signal_te)
+                                           pre_drop=pre_drop, post_drop=post_drop, signal_te=signal_te)
 
     # # Pick out the peak location
     # sig_len_hf = np.uint16((acq_len - pre_drop - post_drop) * pk_win / 2)
@@ -462,6 +517,9 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop
 
     input_mask = noi_all
 
+    # vis.freq_plot(input_mask, dt=dt, name='Input Mask', ylim=ylim_freq)
+    # vis.freq_plot(input_mask[:100], dt=dt, name='Input Mask per Acq Window', ylim=ylim_freq)
+
     if Disp_Intermediate:
         vis_region = [0 + polar_period + post_polar_gap_period, 1000 + polar_period + post_polar_gap_period]
         plt.figure()
@@ -479,44 +537,76 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop
     emi_prdct_tot = np.zeros_like(zfilled_data)
 
     # Multi-loop Auto lambda
-    if lambda_val == -1:
-        # lambda_val = auto_lambda(zfilled_data, rho, ft_prtct=ft_prtct)
-        lambda_val = auto_lambda(np.where(noi_all, zfilled_data, 0), rho, ft_prtct=ft_prtct,
-                                 Disp_Intermediate=Disp_Intermediate)
-    while lambda_val > 0:
-        emi_prdct = sn_recognition(signal=zfilled_data, mask=input_mask, lambda_val=lambda_val, tol=tol,
-                                   max_iter=max_iter,
-                                   method=method, rho=rho)
-        if Disp_Intermediate:
-            vis.freq_plot(emi_prdct, dt=dt, name='EMI pred lambda = %10.3E' % lambda_val)
-        # if Disp_Intermediate:
-        #     temp = emi_prdct[samp_all]
-        #     vis.complex(temp[:120], name='Subtracted Signal in time domain, first 120')
-        #     vis.complex(emi_prdct_tot[:120], name='Total Subtracted Signal before this step in time domain, first 120')
+    if method == "j2_bounded":
+        lambda_max, lambda_min = auto_lambda(np.where(noi_all, zfilled_data, 0), rho, ft_prtct=ft_prtct,
+                                             Disp_Intermediate=Disp_Intermediate)
+        lambda_best = lambda_max
+        while lambda_max - lambda_min > 10000:  # todo: set this parameter elsewhere
+            print("Lambda range: ", lambda_max, lambda_min)
+            lambda_vals = np.linspace(lambda_min, lambda_max, 10)
+            j2_lambda = np.zeros(len(lambda_vals))
+            for i in range(len(lambda_vals)):
+                print("Processing lambda: %d out of %d" % (i, len(lambda_vals)))
+                emi_prdct = sn_recognition(signal=zfilled_data, mask=noi_all, lambda_val=lambda_vals[i], tol=tol,
+                                           max_iter=max_iter,
+                                           method=method, rho=rho)
+                # vis.freq_plot(emi_prdct, dt=dt, name='EMI pred lambda = %10.3E' % lambda_vals[i])
+                j2_lambda[i] = find_j2(predict=emi_prdct, true=zfilled_data, mask=sig_all)
+                print("J2: ", j2_lambda[i])
+            vis.plot2d(lambda_vals, j2_lambda, title="J2 vs Lambda", xlabel="Lambda", ylabel="J2")
+            lambda_max = lambda_vals[np.argmin(j2_lambda) + 1]
+            lambda_min = lambda_vals[np.argmin(j2_lambda) - 1]
+            lambda_best = lambda_vals[np.argmin(j2_lambda)]
 
+        emi_prdct_tot = sn_recognition(signal=zfilled_data, mask=noi_all, lambda_val=lambda_best, tol=tol,
+                                       max_iter=max_iter,
+                                       method=method, rho=rho)
+        print("Done. Best lambda: ", lambda_best)
+        vis.freq_plot(emi_prdct_tot, dt=dt, name='EMI pred lambda = %10.3E' % lambda_best)
 
-        zfilled_data[samp_all] = zfilled_data[samp_all] - emi_prdct[samp_all]
-        if Disp_Intermediate:
-            vis.freq_plot(np.where(samp_all, zfilled_data, 0), dt=dt, name='Raw Signal (without Comb Shaped Mask)',
-                          ylim=ylim_freq)
-            vis.freq_plot(np.where(noi_all, zfilled_data, 0), dt=dt, name='Comb input',
-                          ylim=ylim_freq)
-            vis.complex(zfilled_data[:acq_len], name='Time domain')
+    else:
+        if lambda_val == -1:
+            lambda_val, _ = auto_lambda(np.where(noi_all, zfilled_data, 0), rho, ft_prtct=ft_prtct,
+                                        Disp_Intermediate=Disp_Intermediate)
+        while lambda_val > 0:
+            emi_prdct = sn_recognition(signal=zfilled_data, mask=input_mask, lambda_val=lambda_val, tol=tol,
+                                       max_iter=max_iter,
+                                       method=method, rho=rho)
+            if Disp_Intermediate:
+                vis.freq_plot(emi_prdct, dt=dt, name='EMI pred lambda = %10.3E' % lambda_val)
+            # if Disp_Intermediate:
+            #     temp = emi_prdct[samp_all]
+            #     vis.complex(temp[:120], name='Subtracted Signal in time domain, first 120')
+            #     vis.complex(emi_prdct_tot[:120], name='Total Subtracted Signal before this step in time domain, first 120')
 
-        # if val.is_white_noise(zfilled_data[noi_all]):
-        if val.is_white_noise(np.where(noi_all, zfilled_data, 0), tol=auto_corr_tol):
-            print("Reached White Noise")
-            break
+            zfilled_data[samp_all] = zfilled_data[samp_all] - emi_prdct[samp_all]
+            if Disp_Intermediate:
+                vis.freq_plot(np.where(samp_all, zfilled_data, 0), dt=dt, name='Raw Signal (without Comb Shaped Mask)',
+                              ylim=ylim_freq)
+                vis.freq_plot(np.where(noi_all, zfilled_data, 0), dt=dt, name='Comb input',
+                              ylim=ylim_freq)
+                vis.complex(zfilled_data[:acq_len], name='Time domain')
 
-        # I added this line to prevent the gaps between each TE to carry a value - this should not affect the result
-        # but just in case
-        zfilled_data = np.where(samp_all, zfilled_data, 0)
+            # Stopping Criteria: Check if the signal is white noise
+            if val.is_white_noise(zfilled_data[noi_all], tol=auto_corr_tol):
+                # if val.is_white_noise(np.where(noi_all, zfilled_data, 0), tol=auto_corr_tol):
+                print("Reached White Noise")
+                break
 
-        # update lambda
-        lambda_val = auto_lambda(np.where(noi_all, zfilled_data, 0), rho, lambda_default=lambda_val,
-                                 ft_prtct=ft_prtct, Disp_Intermediate=Disp_Intermediate)
-        # update total predicted EMI
-        emi_prdct_tot += emi_prdct
+            # Stopping Criteria2: Median filter
+            if val.is_median_flat(zfilled_data[noi_all], tol=auto_corr_tol):
+                print("Reached Median Flat")
+                break
+
+            # I added this line to prevent the gaps between each TE to carry a value - this should not affect the result
+            # but just in case
+            zfilled_data = np.where(samp_all, zfilled_data, 0)
+
+            # update lambda
+            lambda_val, _ = auto_lambda(np.where(noi_all, zfilled_data, 0), rho, lambda_default=lambda_val,
+                                        ft_prtct=ft_prtct, Disp_Intermediate=Disp_Intermediate)
+            # update total predicted EMI
+            emi_prdct_tot += emi_prdct
     result = emi_prdct_tot
 
     return result
@@ -546,7 +636,7 @@ def auto_lambda(signal, rho, lambda_default=np.inf, tol=None, cvg=0.99, ft_prtct
 
     # if lambda_val > lower_bound and lambda_val < lambda_default * cvg:
     if lambda_val > lower_bound:
-        return lambda_val
+        return lambda_val, lower_bound
     # elif lambda_val/tol[0]*tol[1] > lower_bound:
     #     print("Auto lambda set to lower bound: ", lower_bound)
     #     return lower_bound
@@ -588,7 +678,8 @@ def gen_drop(seg_1Echo, pre_drop=0, post_drop=0):
     return seg_1Echo
 
 
-def gen_sig_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt, pre_drop, post_drop):
+def gen_sig_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt, pre_drop,
+                 post_drop):
     sig_1Echo = np.zeros(acq_len, dtype=bool)
     sig_1Echo[max(0, pk_id - sig_len_hf):min(pk_id + sig_len_hf, acq_len)] = 1
     sig_1Echo = gen_drop(sig_1Echo, pre_drop, post_drop)
@@ -597,7 +688,8 @@ def gen_sig_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_
     return sig_all.astype(bool)
 
 
-def gen_noi_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt, pre_drop, post_drop):
+def gen_noi_mask(acq_len, N_echoes, TE_len, pk_id, sig_len_hf, polar_time, post_polar_gap_time, dt, pre_drop,
+                 post_drop):
     noi_1Echo = np.ones(acq_len, dtype=bool)
     noi_1Echo[max(0, pk_id - sig_len_hf):min(pk_id + sig_len_hf, acq_len)] = 0
     noi_1Echo = gen_drop(noi_1Echo, pre_drop, post_drop)
@@ -612,6 +704,20 @@ def gen_samp_mask(acq_len, N_echoes, TE_len, polar_time, post_polar_gap_time, dt
     samp_all = np.tile(samp_1Echo, N_echoes)
     samp_all = add_polarization(samp_all, polar_time, post_polar_gap_time, dt, value=pol, type=bool)
     return samp_all.astype(bool)
+
+
+def find_j2(predict, true, mask):
+    """
+    Find the J2 value of the signal.
+
+    Parameters:
+    - signal (numpy.ndarray): Input signal.
+    - mask (numpy.ndarray): Mask for the signal.
+
+    Returns:
+    - float: The J2 value.
+    """
+    return np.linalg.norm(true[mask] - predict[mask]) ** 2
 
 
 # %%
@@ -629,12 +735,10 @@ def sn_recognition(signal, mask, lambda_val, tol=0.1, max_iter=100, method="conj
     # visualization.complex(x0, name="Initial guess")
     # visualization.complex(signal, "input signal")
     # visualization.complex(mask, "input mask")
-    if method == "conj_grad_l1_reg":
+    if method == "conj_grad_l1_reg" or method == "j2_bounded":
         sn_prdct, admm_flag = admm_l2_l1(A=A, b=y, x0=x0, l1_wt=lambda_val, rho=rho,
                                          iter_max=max_iter,
                                          eps=tol)
-        # sn_prdct = cg_comb(lambda_val=lambda_val, mask=mask, y=y, max_iter=max_iter, stepsize=stepsize, tol=tol).run()
-
         # if not admm_flag:
         #     print("Step limit reached at ADMM.")
     elif method == "peak_pick":
@@ -644,7 +748,7 @@ def sn_recognition(signal, mask, lambda_val, tol=0.1, max_iter=100, method="conj
 
     # visualization.plot_against_frequency(sn_prdct, len(sn_prdct), 1e-5, "EMI prediction in frequency domain")
 
-    H = op.hadamard_op(np.abs(sn_prdct) > 1e-1 * np.max(np.abs(sn_prdct)))
+    H = op.hadamard_op(np.abs(sn_prdct) > 1e-2 * np.max(np.abs(sn_prdct)))  # TODO: check if there's a be
     A = op.composite_op(S, F, H)
     sn_prdct, cg_flag = cg.solve_lin_cg(y, A, sn_prdct, B=op.scalar_prod_op(0.05), max_iter=10)
 
