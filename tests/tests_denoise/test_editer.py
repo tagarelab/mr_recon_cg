@@ -10,23 +10,32 @@ import numpy as np
 from scipy.fftpack import fftn, fftshift
 import matplotlib.pyplot as plt
 from denoise import editer
+from scipy.io import loadmat
 
 
 class TestEDITER(TestCase):
     def test_editer_process_2d(self):
+        """
+        Test the editer_process_2D function.
+        Translated from MATLAB to Python with ChatGPT based on the original EDITER code by Sai Abitha Srinivas.
+        Edited & tested by the author.
+        :return:
+        """
         # Number of coils
-        Nc = 5
+        Nc = 3
 
         # Load data (replace with actual data loading)
-        datafft = np.load('test_inputs/data_BBEMI_2D_brainslice.mat')  # Example placeholder
-        datanoise_fft_list = [np.load(f'datanoise_fft_{i + 1}.npy') for i in range(Nc)]
+        # Load data from .mat file
+        data = loadmat('test_inputs/data_BBEMI_2D_brainslice.mat')
+        datafft = data['datafft']
+        datanoise_fft_list = [data[f'datanoise_fft_{i + 1}'] for i in range(Nc)]
 
         # Process the brain slice
         corr_img_opt_toep = editer.editer_process_2D(datafft, datanoise_fft_list, Nc)
 
         # Visualization
-        x_range = np.arange(150, 351)
-        y_range = np.arange(1, 102)
+        x_range = np.arange(149, 350)
+        y_range = np.arange(0, 101)
 
         plt.figure(figsize=(10, 8))
         plt.subplot(2, 1, 1)

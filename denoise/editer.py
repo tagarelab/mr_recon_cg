@@ -33,7 +33,7 @@ def editer_process_2D(datafft, datanoise_fft_list, Nc):
     ksz_col, ksz_lin = 0, 0
 
     # Kernels across PE lines
-    kern_pe = np.zeros((Nc * (2 * ksz_col + 1) * (2 * ksz_lin + 1), nlin))
+    kern_pe = np.zeros((Nc * (2 * ksz_col + 1) * (2 * ksz_lin + 1), nlin), dtype='complex')
 
     for clin in range(nlin):
         noise_mat = []
@@ -47,7 +47,11 @@ def editer_process_2D(datafft, datanoise_fft_list, Nc):
             for lin_shift in range(-ksz_lin, ksz_lin + 1):
                 for padded_df in padded_dfs:
                     dftmp = np.roll(np.roll(padded_df, col_shift, axis=0), lin_shift, axis=1)
-                    noise_mat.append(dftmp[ksz_col:-ksz_col, ksz_lin:-ksz_lin])
+                    if ksz_col > 0:
+                        dftmp = dftmp[ksz_col:-ksz_col, :]
+                    if ksz_lin > 0:
+                        dftmp = dftmp[:, ksz_lin:-ksz_lin]
+                    noise_mat.append(dftmp)
 
         gmat = np.reshape(np.stack(noise_mat, axis=-1), (-1, len(noise_mat)))
 
@@ -76,7 +80,7 @@ def editer_process_2D(datafft, datanoise_fft_list, Nc):
 
     # Final processing with the selected lines
     ksz_col, ksz_lin = 7, 0
-    gksp = np.zeros((ncol, nlin))
+    gksp = np.zeros((ncol, nlin), dtype='complex')
 
     for pe_rng in win_stack:
         noise_mat = []
@@ -88,7 +92,11 @@ def editer_process_2D(datafft, datanoise_fft_list, Nc):
             for lin_shift in range(-ksz_lin, ksz_lin + 1):
                 for padded_df in padded_dfs:
                     dftmp = np.roll(np.roll(padded_df, col_shift, axis=0), lin_shift, axis=1)
-                    noise_mat.append(dftmp[ksz_col:-ksz_col, ksz_lin:-ksz_lin])
+                    if ksz_col > 0:
+                        dftmp = dftmp[ksz_col:-ksz_col, :]
+                    if ksz_lin > 0:
+                        dftmp = dftmp[:, ksz_lin:-ksz_lin]
+                    noise_mat.append(dftmp)
 
         gmat = np.reshape(np.stack(noise_mat, axis=-1), (-1, len(noise_mat)))
 
@@ -102,32 +110,3 @@ def editer_process_2D(datafft, datanoise_fft_list, Nc):
     corr_img_opt_toep = fftshift(fftn(fftshift(gksp)))
 
     return corr_img_opt_toep
-
-
-# User input for Nc
-Nc = int(input("Enter the number of channels (Nc): "))
-
-# Load data (replace with actual data loading)
-datafft = np.load('datafft.npy')  # Example placeholder
-datanoise_fft_list = [np.load(f'datanoise_fft_{i + 1}.npy') for i in range(Nc)]
-
-# Process the brain slice
-corr_img_opt_toep = process_brain_slice(datafft, datanoise_fft_list, Nc)
-
-# Visualization
-x_range = np.arange(150, 351)
-y_range = np.arange(1, 102)
-
-plt.figure(figsize=(10, 8))
-plt.subplot(2, 1, 1)
-uncorr = fftshift(fftn(fftshift(datafft)))
-plt.imshow(np.flipud(np.rot90(np.abs(uncorr[x_range[:, None], y_range]))), cmap='gray', aspect='equal')
-plt.axis('tight')
-plt.title('Primary uncorrected')
-
-plt.subplot(2, 1, 2)
-plt.imshow(np.flipud(np.rot90(np.abs(corr_img_opt_toep[x_range[:, None], y_range]))), cmap='gray', aspect='equal')
-plt.axis('tight')
-plt.title('Corrected with EDITER')
-
-plt.show()
