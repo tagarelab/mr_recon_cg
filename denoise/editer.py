@@ -11,20 +11,23 @@ import matplotlib.pyplot as plt
 from scipy.fftpack import fftn, fftshift
 
 
-def editer_process_2D(datafft, datanoise_fft_list, Nc):
+def editer_process_2D(datafft, datanoise_fft_list):
     """
     Translated from MATLAB to Python with ChatGPT based on the original EDITER code by Sai Abitha Srinivas.
     Edited & tested by the author.
     Process 2D brain slice data using a broadband EMI algorithm.
 
     Parameters:
-        datafft: 2D numpy array, Fourier-transformed brain slice data.
-        datanoise_fft_list: List of 2D numpy arrays, noise data for different channels.
+        datafft: 2D numpy array, k space data.
+        datanoise_fft_list: List of 2D numpy arrays, k space noise data from each coil.
         Nc: int, number of channels.
 
     Returns:
         corr_img_opt_toep: 2D numpy array, processed image after correction.
     """
+
+    # Number of EMI coils
+    Nc = len(datanoise_fft_list)
 
     # Image size
     ncol, nlin = datafft.shape
@@ -107,6 +110,4 @@ def editer_process_2D(datafft, datanoise_fft_list, Nc):
         tosub = np.reshape(np.dot(gmat, kern), (ncol, len(pe_rng)))
         gksp[:, pe_rng] = init_mat_sub - tosub
 
-    corr_img_opt_toep = fftshift(fftn(fftshift(gksp)))
-
-    return corr_img_opt_toep
+    return gksp

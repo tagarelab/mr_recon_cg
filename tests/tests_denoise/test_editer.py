@@ -22,7 +22,7 @@ class TestEDITER(TestCase):
         :return:
         """
         # Number of coils
-        Nc = 3
+        Nc = 5
 
         # Load data (replace with actual data loading)
         # Load data from .mat file
@@ -31,7 +31,9 @@ class TestEDITER(TestCase):
         datanoise_fft_list = [data[f'datanoise_fft_{i + 1}'] for i in range(Nc)]
 
         # Process the brain slice
-        corr_img_opt_toep = editer.editer_process_2D(datafft, datanoise_fft_list, Nc)
+        gksp = editer.editer_process_2D(datafft, datanoise_fft_list)
+
+        corr_img_opt_toep = fftshift(fftn(fftshift(gksp)))
 
         # Visualization
         x_range = np.arange(149, 350)
@@ -48,6 +50,6 @@ class TestEDITER(TestCase):
         plt.imshow(np.flipud(np.rot90(np.abs(corr_img_opt_toep[x_range[:, None], y_range]))), cmap='gray',
                    aspect='equal')
         plt.axis('tight')
-        plt.title('Corrected with EDITER')
+        plt.title('Corrected with EDITER, Number of EMI Coils = %d' % Nc)
 
         plt.show()
