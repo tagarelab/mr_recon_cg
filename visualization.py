@@ -353,9 +353,9 @@ def plot_against_frequency(signal, frag_len, dt, name=None, xlim=None, ylim=None
 
 def freq_plot(signal, dt, name=None, ylim=None, real_imag=True, peak_info=None, log_scale=False, ifft=False):
     if ifft:
-        signal_ft = fft.ifft(fft.ifftshift(signal))
+        signal_ft = fft.ifftshift(fft.ifft(np.squeeze(signal)))
     else:
-        signal_ft = fft.fftshift(fft.fft(signal))
+        signal_ft = fft.fftshift(fft.fft(np.squeeze(signal)))
     length = len(signal_ft)
     plot_against_frequency(signal_ft, length, dt, name=name, ylim=ylim, real_imag=real_imag, peak_info=peak_info,
                            log_scale=log_scale)
@@ -406,9 +406,16 @@ def freq_analysis(signal, frag_len, dt, name=None, type='heatmap'):
     return fig
 
 
-def absolute(signal, name=None, ylim=None, xlabel=None, ylabel=None):
+def absolute(signal, name=None, ylim=None, xlabel=None, ylabel=None, legends=None):
     fig = plt.figure()
-    plt.plot(np.abs(signal))
+    if isinstance(signal, list):
+        for i in range(len(signal)):
+            plt.plot(np.abs(signal[i]), label=legends[i] if legends else None)
+        if legends:
+            plt.legend()
+    else:
+        plt.plot(np.abs(signal))
+
     set_limit_title(title=name, ylim=ylim, xlabel=xlabel, ylabel=ylabel)
     plt.show()
     return fig
