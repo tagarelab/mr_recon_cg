@@ -71,6 +71,12 @@ def editer_process_2D(datafft, datanoise_fft_list):
     # Number of EMI coils
     Nc = len(datanoise_fft_list)
 
+    # Check Data size
+    if datafft.ndim == 1:
+        datafft = np.expand_dims(datafft, axis=1)
+    if datanoise_fft_list[0].ndim == 1:
+        datanoise_fft_list = [np.expand_dims(datanoise_fft, axis=1) for datanoise_fft in datanoise_fft_list]
+
     # Image size
     ncol, nlin = datafft.shape
 
