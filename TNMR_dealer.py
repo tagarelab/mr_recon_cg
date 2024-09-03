@@ -11,7 +11,11 @@ import mr_io
 __all__ = ['read_tnt_1d', 'sort_channels']
 
 
-def scan_2_mat(loc=None, interleave=None, N_ch=None, rep=None, name=None, seg=None, confirm=True, new_name=None):
+def scan_2_mat(loc=None, interleave=None, N_ch=None, rep=None, name=None, seg=None, confirm=True, new_name=None,
+               save=True, return_data=False, disp_msg=True):
+    if not save and not return_data:
+        raise ValueError('Either save or return_data should be True.')
+
     # Prompt user input if not provided when function is called
     if loc is None:
         loc = input('What is the directory of your data (end with \\)?\n')
@@ -36,7 +40,8 @@ def scan_2_mat(loc=None, interleave=None, N_ch=None, rep=None, name=None, seg=No
     ch_len = get_ch_len(data, N_ch)
     seg_len = int(ch_len / seg)
 
-    print('Output matrix size per channel:\n repetition axis: {0:d}, data axis: {1:d}\n'.format(rep * seg, seg_len))
+    if disp_msg:
+        print('Output matrix size per channel:\n repetition axis: {0:d}, data axis: {1:d}\n'.format(rep * seg, seg_len))
     if confirm:
         proceed = input('Proceed to saving (yes/no)?')
         if proceed == 'yes':
@@ -64,7 +69,12 @@ def scan_2_mat(loc=None, interleave=None, N_ch=None, rep=None, name=None, seg=No
 
         if new_name is None:
             new_name = name
-        mr_io.save_dict(mdic, name=new_name, path=loc, date=False)
+
+        if save:
+            mr_io.save_dict(mdic, name=new_name, path=loc, date=False)
+
+        if return_data:
+            return mdic
 
     else:
         print('Data not saved.')

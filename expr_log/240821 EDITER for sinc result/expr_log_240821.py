@@ -35,7 +35,7 @@ Nc = len(datanoise_fft_list)
 #     datanoise_fft_list_i = [np.expand_dims(np.mean(datanoise_fft[:, :i], axis=1),axis=1) for datanoise_fft in
 #                           datanoise_fft_list]
 #
-#     # %% Process the brain slice
+#     # %% EDITER correction
 #     editer_corr_i = editer.editer_process_2D(datafft_i, datanoise_fft_list_i)
 #
 #     # %% Save dict
