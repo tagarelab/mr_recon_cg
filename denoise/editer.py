@@ -56,10 +56,12 @@ def main():
     N_ch = 4  # Change to the actual number of channels
     rep = 1  # Change to the actual number of separate .tnt files
     seg = 1  # Change to the actual number of segments in one .tnt files that will be saved in separate rows, usually 1
-    editer_process_all_files(loc, interleave, N_ch, rep, seg)
+    sig_ch_name = 'ch2'  # Change to the actual signal channel name
+    emi_ch_name = ['ch1', 'ch3', 'ch4']  # Change to the actual EMI channel names
+    editer_process_all_files(loc, interleave, N_ch, rep, seg, sig_ch_name, emi_ch_name)
 
 
-def editer_process_all_files(folder_path, interleave, N_ch, rep, seg):
+def editer_process_all_files(folder_path, interleave, N_ch, rep, seg, sig_ch_name, emi_ch_name):
     # List all files in the folder
     files = os.listdir(folder_path)
     output_path = os.path.join(folder_path, "EDITER\\")
@@ -81,8 +83,6 @@ def editer_process_all_files(folder_path, interleave, N_ch, rep, seg):
                 file = file[:-4]
             data_mat = td.scan_2_mat(loc=folder_path, name=file, interleave=interleave, N_ch=N_ch, rep=rep, seg=seg,
                                      confirm=False, save=False, return_data=True, disp_msg=False)
-            sig_ch_name = 'ch2'  # Change to the actual signal channel name
-            emi_ch_name = ['ch1', 'ch3', 'ch4']  # Change to the actual EMI channel names
             datafft = data_mat[sig_ch_name]
             datanoise_fft_list = [data_mat[name] for name in emi_ch_name]
             editer_corr = editer_process_2D(datafft, datanoise_fft_list)
