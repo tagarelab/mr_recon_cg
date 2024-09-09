@@ -61,7 +61,8 @@ def main():
     editer_process_all_files(loc, interleave, N_ch, rep, seg, sig_ch_name, emi_ch_name)
 
 
-def editer_process_all_files(folder_path, interleave, N_ch, rep, seg, sig_ch_name, emi_ch_name):
+def editer_process_all_files(folder_path, interleave, N_ch, rep, seg, sig_ch_name, emi_ch_name,
+                             new_file_prefix='EDITER_'):
     # List all files in the folder
     files = os.listdir(folder_path)
     output_path = os.path.join(folder_path, "EDITER\\")
@@ -86,7 +87,13 @@ def editer_process_all_files(folder_path, interleave, N_ch, rep, seg, sig_ch_nam
             datafft = data_mat[sig_ch_name]
             datanoise_fft_list = [data_mat[name] for name in emi_ch_name]
             editer_corr = editer_process_2D(datafft, datanoise_fft_list)
-            mr_io.save_single_mat(editer_corr, name=file + '_EDITER', path=output_path, disp_msg=False)
+
+            # Save the corrected data and raw data
+            dict = {'raw_sig': datafft, 'raw_emi': datanoise_fft_list, 'editer_corr': editer_corr}
+            mr_io.save_dict(dict, name=new_file_prefix + file, path=output_path, disp_msg=False)
+
+            # only save the corrected data
+            # mr_io.save_single_mat(editer_corr, name=new_file_prefix + file, path=output_path, disp_msg=False)
 
 
 def editer_process_2D(datafft, datanoise_fft_list):
