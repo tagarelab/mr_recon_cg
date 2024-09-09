@@ -7,11 +7,6 @@
 """
 
 import numpy as np
-import scipy as sp
-import matplotlib.pyplot as plt
-import visualization as vis
-import algebra as algb
-
 
 def snr(data, signal_region=None, noise_region=None, method='std'):
     """
