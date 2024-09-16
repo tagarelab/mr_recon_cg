@@ -8,6 +8,16 @@
 
 import numpy as np
 
+
+def power(data):
+    """
+    Compute the power of the data.
+    :param data:
+    :return:
+    """
+    return np.mean(np.abs(data) ** 2)
+
+
 def snr(data, signal_region=None, noise_region=None, method='std'):
     """
     Compute the signal-to-noise ratio (SNR) of the data.
