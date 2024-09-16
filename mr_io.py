@@ -99,9 +99,15 @@ def load_list_mat(name, num_files, path=None, disp_msg=True):
 
 
 def load_single_mat(name, path=None, disp_msg=True):
-    file_name = f'{name}.mat'
+    if not name.endswith('.mat'):
+        file_name = f'{name}.mat'
+    else:
+        file_name = name
+        name = name[:-4]
+
     if path is not None:
         file_name = path + file_name
+
     mdic = sio.loadmat(file_name)
 
     if disp_msg:
