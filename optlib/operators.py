@@ -89,6 +89,23 @@ class hadamard_op:
         return self.A*x
     def transpose(self,x):
         return self.forward(x)
+
+
+class hadamard_op_expand:
+    """
+       Hadamard product. Multiply every entry of
+       x with the corresponding entry of A
+    """
+
+    def __init__(self, A):
+        self.A = A
+
+    def forward(self, x):
+        x = np.expand_dims(x, axis=-1)
+        return self.A * x
+
+    def transpose(self, x):
+        return self.forward(x)
     
 class real_fftn_op:
     """
@@ -99,7 +116,6 @@ class real_fftn_op:
     def transpose(self,x):
         return np.real(np.fft.ifftn(np.fft.ifftshift(x)))
 
-    
     
 class composite_op:
     """
@@ -141,6 +157,4 @@ class add_op:
         y=0
         for op in self.ops:
             y += op.transpose(x)
-        return y   
-    
-
+        return y

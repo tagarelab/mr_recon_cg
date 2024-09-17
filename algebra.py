@@ -206,7 +206,7 @@ def vec2mesh(mag, x_coord, y_coord, z_coord, x_dim=None, y_dim=None, z_dim=None,
                     try:
                         mag_mesh[dd, xx, yy, zz] = mag[dd, ind]
                     except ValueError:
-                        print('ValueError: ', ind)
+                        # print('ValueError: ', ind)    # turn this on for debugging
                         mag_mesh[dd, xx, yy, zz] = empty_val
     if mag.shape[0] == 1:
         mag_mesh = np.squeeze(mag_mesh, axis=0)

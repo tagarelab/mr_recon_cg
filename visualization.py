@@ -203,6 +203,8 @@ def scatter3d(B0_LR, B0_SI, B0_AP, grad, xlim=None, ylim=None, zlim=None, clim=N
     set_limit_title(ax=ax, xlim=xlim, ylim=ylim, zlim=zlim, clim=clim, title=title, xlabel=xlabel, ylabel=ylabel,
                     zlabel=zlabel, image=scatter)
 
+    plt.show()
+
 
 def sig_time(time, signal, xlabel='Time (s)', ylabel='Signal', title='Signal in Time Domain'):
     """
@@ -233,6 +235,7 @@ def imshow(image, name=None):
     plt.imshow(image, cmap='gray')
     plt.colorbar()
     set_limit_title(title=name)
+    plt.show()
     return fig
 
 
