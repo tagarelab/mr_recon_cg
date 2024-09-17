@@ -120,3 +120,47 @@ def gen_sphere(X_axis, Y_axis, Z_axis, loc, rad):
     X, Y, Z = np.meshgrid(X_axis, Y_axis, Z_axis)
 
     return (X - loc[0]) ** 2 + (Y - loc[1]) ** 2 + (Z - loc[2]) ** 2 < rad ** 2
+
+
+def generate_Y_shape(m, n, thickness=None):
+    """
+    Generates a matrix of size m x n with a 'Y' shape pattern whose thickness adjusts
+    based on the smallest dimension between m and n.
+
+    The 'Y' shape is created with '1's and the rest of the matrix is filled with '0's.
+    The top arms of the 'Y' are diagonal lines, and the vertical line starts in the middle.
+
+    Args:
+    m (int): Number of rows in the matrix.
+    n (int): Number of columns in the matrix.
+
+    Returns:
+    np.ndarray: Matrix with the 'Y' shape pattern, with adjustable thickness.
+
+    This function is drafted by ChatGPT on 2024-09-17, edited and tested by the author.
+    """
+
+    # Create an m x n matrix filled with zeros
+    matrix = np.zeros((m, n), dtype=int)
+
+    # Determine the middle column for the vertical line of the 'Y'
+    mid_col = n // 2
+
+    # Calculate the thickness based on the smaller of the dimensions
+    if thickness is None:
+        thickness = max(1, min(m, n) // 10)  # The thickness is proportional to the size
+
+    # Create the top arms of the 'Y' (diagonal lines)
+    for i in range(min(m // 2, n // 2)):
+        for t in range(thickness):
+            if i + t < m and i + t < n:
+                matrix[i + t, i] = 1  # Left diagonal arm (thickened)
+                matrix[i + t, n - i - 1] = 1  # Right diagonal arm (thickened)
+
+    # Create the vertical line of the 'Y'
+    for i in range(m // 2, m):
+        for t in range(-thickness // 2, thickness // 2 + 1):
+            if 0 <= mid_col + t < n:
+                matrix[i, mid_col + t] = 1
+
+    return matrix
