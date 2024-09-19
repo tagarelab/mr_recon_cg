@@ -56,7 +56,8 @@ B1_coords = np.concatenate((x_b1_raw, y_b1_raw, z_b1_raw), axis=0)
 B1_data, x_b1_raw, y_b1_raw, z_b1_raw = algb.vec2mesh(B1_data_raw, B1_coords[0, :], B1_coords[1, :],
                                                       B1_coords[2, :], empty_val=0.0001)
 
-vis.scatter3d(x_b1_raw, y_b1_raw, z_b1_raw, grad=np.linalg.norm(B1_data, axis=0), title='B1 raw', xlim=xlim, ylim=ylim,
+vis.scatter3d(x_b1_raw, y_b1_raw, z_b1_raw, grad=np.linalg.norm(B1_data, axis=0), title='B1 raw',
+              xlim=xlim, ylim=ylim,
               zlim=zlim)
 
 # Create a 3D grid for the magnetic field data
@@ -64,9 +65,12 @@ vis.scatter3d(x_b1_raw, y_b1_raw, z_b1_raw, grad=np.linalg.norm(B1_data, axis=0)
 # y_b1_raw = np.linspace(-120, +120, B1_data.shape[2])
 # z_b1_raw = np.linspace(-120, +120, B1_data.shape[3])
 
-B1_x = algb.interp_by_pts(current_grad * B1_data[0, :, :, :], x_b1_raw, y_b1_raw, z_b1_raw, intrp_pts, method='linear')
-B1_y = algb.interp_by_pts(current_grad * B1_data[1, :, :, :], x_b1_raw, y_b1_raw, z_b1_raw, intrp_pts, method='linear')
-B1_z = algb.interp_by_pts(current_grad * B1_data[2, :, :, :], x_b1_raw, y_b1_raw, z_b1_raw, intrp_pts, method='linear')
+B1_x = algb.interp_by_pts(current_grad * B1_data[0, :, :, :], x_b1_raw, y_b1_raw, z_b1_raw,
+                          intrp_pts, method='linear')
+B1_y = algb.interp_by_pts(current_grad * B1_data[1, :, :, :], x_b1_raw, y_b1_raw, z_b1_raw,
+                          intrp_pts, method='linear')
+B1_z = algb.interp_by_pts(current_grad * B1_data[2, :, :, :], x_b1_raw, y_b1_raw, z_b1_raw,
+                          intrp_pts, method='linear')
 B1_raw = np.array([B1_x, B1_y, B1_z])
 
 # %% Generate Mask and Phantom
@@ -76,20 +80,23 @@ height = 100  # mm
 breast_loc = np.array([0, 0, Z_axis[0]])  # mm
 chest_dim = np.array([200, 200, 30])  # mm
 coil_tkns = 5  # mm
-breast_mask = mk.gen_breast_mask(X_axis, Y_axis, Z_axis, R=R, height=height, breast_loc=breast_loc.copy(),
+breast_mask = mk.gen_breast_mask(X_axis, Y_axis, Z_axis, R=R, height=height,
+                                 breast_loc=breast_loc.copy(),
                                  tkns=coil_tkns,
                                  chest_dim=chest_dim)
 
 # Generate phantom
 # phantom = mk.gen_sphere(X_axis, Y_axis, Z_axis, loc=loc + [0, 0, 20], rad=60)
-phantom = mk.gen_breast_mask(X_axis, Y_axis, Z_axis, R=R - 10, height=height, breast_loc=breast_loc.copy(),
+phantom = mk.gen_breast_mask(X_axis, Y_axis, Z_axis, R=R - 10, height=height,
+                             breast_loc=breast_loc.copy(),
                              tkns=coil_tkns,
                              chest_dim=chest_dim)
 Y_shape = mk.generate_Y_shape(len(X_axis), len(Y_axis))
 Y_shape = np.logical_not(Y_shape)
 Y_shape = np.stack([Y_shape] * len(Z_axis), axis=2)
 phantom = np.logical_and(phantom, Y_shape)
-vis.scatter3d(X_axis, Y_axis, Z_axis, phantom, title='Phantom in Breast Mask', mask=breast_mask, xlim=xlim,
+vis.scatter3d(X_axis, Y_axis, Z_axis, phantom, title='Phantom in Breast Mask', mask=breast_mask,
+              xlim=xlim,
               ylim=ylim, zlim=zlim)
 
 # %% slice selection
@@ -113,13 +120,17 @@ SI_cut = (Y_M > -3) & (Y_M < 3)
 LR_cut = (X_M > -3) & (X_M < 3)
 
 # Visualize
-vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(B0_polar, axis=0), xlim=xlim, ylim=ylim, zlim=zlim, mask=slice,
+vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(B0_polar, axis=0), xlim=xlim, ylim=ylim,
+              zlim=zlim, mask=slice,
               title='B0 (mT)')
-vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(B0_polar, axis=0), xlim=xlim, ylim=ylim, zlim=zlim, mask=SI_cut,
+vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(B0_polar, axis=0), xlim=xlim, ylim=ylim,
+              zlim=zlim, mask=SI_cut,
               title='B0 (mT)')
-vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(B1_raw, axis=0), xlim=xlim, ylim=ylim, zlim=zlim, mask=slice,
+vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(B1_raw, axis=0), xlim=xlim, ylim=ylim,
+              zlim=zlim, mask=slice,
               title='B1 (mT)')
-vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(B1_raw, axis=0), xlim=xlim, ylim=ylim, zlim=zlim, mask=SI_cut,
+vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(B1_raw, axis=0), xlim=xlim, ylim=ylim,
+              zlim=zlim, mask=SI_cut,
               title='B1 (mT)')
 
 # %% effective B1
@@ -222,21 +233,25 @@ t = np.arange(0, acq_time, dt)  # ms
 # Magnetization
 M = P.forward(O)
 
-vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(M, axis=0), xlim=xlim, ylim=ylim, zlim=zlim, title='Magnetization',
+vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(M, axis=0), xlim=xlim, ylim=ylim, zlim=zlim,
+              title='Magnetization',
               mask=VOI)
 
 # Excited Magnetization
 M_excited = E.forward(M)
-vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(M_excited, axis=0), xlim=xlim, ylim=ylim, zlim=zlim,
+vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(M_excited, axis=0), xlim=xlim, ylim=ylim,
+              zlim=zlim,
               title='Excited Magnetization', mask=VOI)
 
 # Dephased Magnetization over time
 M_0 = np.linalg.norm(M_0[:, :, 0], axis=0)  # TODO: is this the correct M0?
 
 M_t = D.forward(M_excited)
-vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(M_t[:, :, 49], axis=0), xlim=xlim, ylim=ylim, zlim=zlim,
+vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(M_t[:, :, 49], axis=0), xlim=xlim, ylim=ylim,
+              zlim=zlim,
               title='Dephased Magnetization at the middle of acq window', mask=VOI)
-vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(M_t[:, :, -1], axis=0), xlim=xlim, ylim=ylim, zlim=zlim,
+vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(M_t[:, :, -1], axis=0), xlim=xlim, ylim=ylim,
+              zlim=zlim,
               title='Dephased Magnetization at the end of acq window', mask=VOI)
 # Measured Signal
 
