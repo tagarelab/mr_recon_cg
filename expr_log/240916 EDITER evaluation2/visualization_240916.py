@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import visualization as vis
 from denoise import noise_analysis as na
 import mr_io
+from denoise import combEMI
 
 # %% Load data
 loc = "C:\\Yale\\MRRC\\mr_recon_cg\\data\\240911_EMI_hunt_S2E5\\EDITER\\"
@@ -67,19 +68,32 @@ file_dict = {
 # position = "Position 1"
 
 # Prepol noise
-names = ["B0 Disconnected", "Prepol off, RO 0%", "Prepol off, RO 3%", "Prepol off RO 6.3%", "Prepol on, RO 0%",
-         "Prepol on, RO 3%", "Prepol on, RO 6.3%"]
-ids = [20, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]  # position 2
-# ids = [41, 22, 23, 24, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40]  # position 1
-position = "Position 2"
+# names = ["B0 Disconnected", "Prepol off, RO 0%", "Prepol off, RO 3%", "Prepol off RO 6.3%", "Prepol on, RO 0%",
+#          "Prepol on, RO 3%", "Prepol on, RO 6.3%"]
+# ids = [20, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]  # position 2
+# # ids = [41, 22, 23, 24, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40]  # position 1
+# position = "Position 2"
+
+# Compare spectrum of with and without prepol
+names = ["B0 Disconnected", "Prepol off, RO 0%", "Prepol on, RO 0%", "Prepol off, RO 3%",
+         "Prepol on, RO 3%", "Prepol off RO 6.3%", "Prepol on, RO 6.3%"]
+ids = [41, 22, 32, 26, 35, 29, 38]  # position 1
 
 Nc = 3
 ylim_temp = [0, 1000]
 ylim_temp_freq = [-60, 60]
 ylim_temp_freq2 = None
+dt = 6e-6  # 6 us
+TE = 3.5e-3  # 3.5 ms
 
 power_raw = np.zeros(len(ids))
 power_corr = np.zeros(len(ids))
+
+signal_raw = np.zeros((len(ids), 20000), dtype=complex)
+signal_corr = np.zeros((len(ids), 20000), dtype=complex)
+
+signal_raw_full = np.zeros((len(ids), 116600), dtype=complex)
+signal_corr_full = np.zeros((len(ids), 116600), dtype=complex)
 
 for i in range(len(ids)):
     dict_i = mr_io.load_single_mat(name=file_dict[ids[i]], path=loc)
@@ -90,6 +104,16 @@ for i in range(len(ids)):
     # power of pre and after noise cancellation
     power_raw[i] = na.power(raw_sig_i)
     power_corr[i] = na.power(editer_corr_i)
+
+    signal_raw[i, :] = np.squeeze(raw_sig_i)
+    signal_corr[i, :] = np.squeeze(editer_corr_i)
+
+    signal_raw_full[i, :] = combEMI.sampled_to_full(signal=raw_sig_i, polar_time=0, post_polar_gap_time=0, dt=dt,
+                                                    acq_len=100, N_echoes=200, TE_len=int(TE / dt))
+    signal_corr_full[i, :] = combEMI.sampled_to_full(signal=editer_corr_i, polar_time=0, post_polar_gap_time=0, dt=dt,
+                                                     acq_len=100, N_echoes=200, TE_len=int(TE / dt))
+
+
 
     # dt = 6e-6
     #
@@ -111,21 +135,37 @@ for i in range(len(ids)):
 # plt.title(position)
 # plt.show()
 
-corr_diff = power_corr[-1] - power_corr[0]
-raw_diff = power_raw[-1] - power_raw[0]
-print(100 * (raw_diff - corr_diff) / raw_diff)
+# corr_diff = power_corr[-1] - power_corr[0]
+# raw_diff = power_raw[-1] - power_raw[0]
+# print(100 * (raw_diff - corr_diff) / raw_diff)
+#
+# # Scatter plot
+# tick_positions = [0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6]
+# tick_to_name = range(len(names))
+#
+# plt.figure()
+# plt.scatter(tick_positions, power_raw, label='Raw')
+# plt.scatter(tick_positions, power_corr, label='Corrected')
+# plt.legend()
+# plt.ylim([0, 5.5e6])
+# plt.xticks(tick_to_name, names)
+# plt.gca().tick_params(axis='x', rotation=15)
+# plt.ylabel('Noise Power')
+# plt.title(position)
+# plt.show()
 
-# Scatter plot
-tick_positions = [0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6]
-tick_to_name = range(len(names))
 
-plt.figure()
-plt.scatter(tick_positions, power_raw, label='Raw')
-plt.scatter(tick_positions, power_corr, label='Corrected')
-plt.legend()
-plt.ylim([0, 5.5e6])
-plt.xticks(tick_to_name, names)
-plt.gca().tick_params(axis='x', rotation=15)
-plt.ylabel('Noise Power')
-plt.title(position)
-plt.show()
+# %% Spectrum comparisons
+vis.compare_unnormalized_freq(signal_raw_full, names, dt, name="Raw Data", xlim=None, ylim=[0, 1e7],
+                              log_scale=False,
+                              rep_axis=1,
+                              subplot=True)
+vis.compare_unnormalized_freq(signal_corr_full, names, dt, name="Corrected Data", xlim=None, ylim=[0, 1e7],
+                              log_scale=False,
+                              rep_axis=1,
+                              subplot=True)
+vis.compare_unnormalized_freq(signal_raw_full - signal_corr_full, names, dt, name="Raw - Corrected", xlim=None,
+                              ylim=[0, 1e7],
+                              log_scale=False,
+                              rep_axis=1,
+                              subplot=True)
