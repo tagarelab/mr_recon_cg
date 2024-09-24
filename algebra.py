@@ -14,32 +14,57 @@ import warnings
 
 def create_perpendicular_unit_vectors(w):
     """
-    Given a 3D vector w, return three unit vectors u, v, w such that:
-    - w is the unit vector with the same direction as w (the input vector)
+    Given an array of 3D vectors w, return three arrays of unit vectors u, v, w such that:
+    - w is the unit vector with the same direction as w (the input vectors)
     - u and v are perpendicular to each other and to w
 
-    This function is drafted by Clarity and edited & tested by the author.
+    :param w: array of 3D vectors with shape (3, n)
+    :return: three arrays of unit vectors u, v, w each with shape (3, n)
     """
-    # Normalize the vector w
-    w = w / np.linalg.norm(w)
+    single_vector = False
+    # Handle the case where w is a single vector
+    if w.ndim == 1:
+        w = w[:, np.newaxis]
+        single_vector = True
 
-    # Create a vector that is not parallel to w to ensure we can create a perpendicular vector
-    if np.allclose(w, [1, 0, 0]):
-        # w is parallel to the x-axis, choose the y-axis
-        temp_vector = np.array([0, 1, 0])
-    else:
-        # otherwise, choose the x-axis
-        temp_vector = np.array([1, 0, 0])
+    # Ensure w is a 2D array with shape (3, n)
+    w = np.atleast_2d(w)
+    assert w.shape[0] == 3, "Input must be an array with the first dimension of size 3"
 
-    # Use the cross product to find a vector that is perpendicular to w
-    u = np.cross(w, temp_vector)
-    u = u / np.linalg.norm(u)
+    # Normalize all vectors w
+    w_norms = np.linalg.norm(w, axis=0)
+    w_unit = w / w_norms
 
-    # Use the cross product to find the third vector that is perpendicular to both w and u
-    v = np.cross(w, u)
-    v = v / np.linalg.norm(v)
+    u_unit = np.empty_like(w_unit)
+    v_unit = np.empty_like(w_unit)
 
-    return u, v, w
+    for i in range(w_unit.shape[1]):
+        wi = w_unit[:, i]
+
+        # Create a vector that is not parallel to wi to ensure we can create a perpendicular vector
+        if np.allclose(wi, [1, 0, 0]):
+            # wi is parallel to the x-axis, choose the y-axis
+            temp_vector = np.array([0, 1, 0])
+        else:
+            # otherwise, choose the x-axis
+            temp_vector = np.array([1, 0, 0])
+
+        # Use the cross product to find a vector that is perpendicular to wi
+        ui = np.cross(wi, temp_vector)
+        ui = ui / np.linalg.norm(ui)
+
+        # Use the cross product to find the third vector that is perpendicular to both wi and ui
+        vi = np.cross(wi, ui)
+        vi = vi / np.linalg.norm(vi)
+
+        u_unit[:, i] = ui
+        v_unit[:, i] = vi
+
+    # If the original input was a single vector, return a tuple of unit vectors
+    if single_vector:
+        return u_unit[:, 0], v_unit[:, 0], w_unit[:, 0]
+
+    return u_unit, v_unit, w_unit
 
 
 def auto_corr(signal, max_lag=10):

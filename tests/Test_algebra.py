@@ -126,16 +126,51 @@ class TestAlgebra(unittest.TestCase):
         """
         x = np.array([1, 2, 3, 4, 5])
 
-    def test_create_pserpendicular_unit_vectors(self):
-        w = np.array([1, 2, 3])
-        u, v, unit_w = algebra.create_perpendicular_unit_vectors(w)
-
-        # Check if the output vectors are perpendicular to each other
+    def test_create_perpendicular_unit_vectors(self):
+        # w = np.array([1, 2, 3])
+        # u, v, unit_w = algebra.create_perpendicular_unit_vectors(w)
+        #
+        # # Check if the output vectors are perpendicular to each other
         tolerance = 1e-6
-        assert np.isclose(np.dot(u, v), 0, atol=tolerance), f"u . v = {np.dot(u, v)}"
-        assert np.isclose(np.dot(u, unit_w), 0, atol=tolerance), f"u . w = {np.dot(u, unit_w)}"
-        assert np.isclose(np.dot(v, unit_w), 0, atol=tolerance), f"v . w = {np.dot(v, unit_w)}"
+        # assert np.isclose(np.dot(u, v), 0, atol=tolerance), f"u . v = {np.dot(u, v)}"
+        # assert np.isclose(np.dot(u, unit_w), 0, atol=tolerance), f"u . w = {np.dot(u, unit_w)}"
+        # assert np.isclose(np.dot(v, unit_w), 0, atol=tolerance), f"v . w = {np.dot(v, unit_w)}"
+        #
+        # # Plot the vectors
+        # vis.quiver3d(np.array([u, v, w]).T, xlim=[-1, 1], ylim=[-1, 1], zlim=[-1, 1],
+        #              label=['u', 'v', 'w'], title='Perpendicular Unit Vectors')
 
-        # Plot the vectors
-        vis.quiver3d(np.array([u, v, w]).T, xlim=[-1, 1], ylim=[-1, 1], zlim=[-1, 1],
-                     label=['u', 'v', 'w'], title='Perpendicular Unit Vectors')
+        # Test cases
+        w_1d = np.array([1, 2, 3])
+        w_2d = np.array([[1, 0], [0, 1], [0, 0]])
+
+        # Single vector test
+        u_1d, v_1d, w_1d_norm = algebra.create_perpendicular_unit_vectors(w_1d)
+
+        # Check orthogonality for single vector
+        assert np.isclose(np.dot(u_1d, v_1d),
+                          0,
+                          atol=tolerance), f"Vectors u and v are not perpendicular: dot(u, v) = {np.dot(u_1d, v_1d)}"
+        assert np.isclose(np.dot(u_1d, w_1d_norm),
+                          0,
+                          atol=tolerance), f"Vectors u and w are not perpendicular: dot(u, w) = {np.dot(u_1d, w_1d_norm)}"
+        assert np.isclose(np.dot(v_1d, w_1d_norm),
+                          0,
+                          atol=tolerance), f"Vectors v and w are not perpendicular: dot(v, w) = {np.dot(v_1d, w_1d_norm)}"
+
+        # Multiple vectors test
+        u_2d, v_2d, w_2d_norm = algebra.create_perpendicular_unit_vectors(w_2d)
+
+        for i in range(w_2d_norm.shape[1]):
+            # Check orthogonality for each vector in the array
+            assert np.isclose(np.dot(u_2d[:, i], v_2d[:, i]),
+                              0,
+                              atol=tolerance), f"Vectors u and v are not perpendicular for vector {i}: dot(u, v) = {np.dot(u_2d[:, i], v_2d[:, i])}"
+            assert np.isclose(np.dot(u_2d[:, i], w_2d_norm[:, i]),
+                              0, atol=tolerance), (f"Vectors u and w are not perpendicular for "
+                                                   f"vector {i}: dot(u, w) = {np.dot(u_2d[:, i], w_2d_norm[:, i])}")
+            assert np.isclose(np.dot(v_2d[:, i], w_2d_norm[:, i]),
+                              0,
+                              atol=tolerance), f"Vectors v and w are not perpendicular for vector {i}: dot(v, w) = {np.dot(v_2d[:, i], w_2d_norm[:, i])}"
+
+        print("All tests passed!")
