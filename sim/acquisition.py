@@ -42,26 +42,62 @@ def detect_signal(M, B, c, t, T1=None, T2=None):
 
 def get_eta(u, v, c):
     """
-    Calculate the eta value
-    :param u: one perpendicular unit vector in the plane perpendicular to the B field
-    :param v: the other perpendicular unit vector in the plane perpendicular to the B field
-    :param c: the sensitivity of the coil
-    :return:
+    Calculate the eta value.
+    :param u: one perpendicular unit vector in the plane perpendicular to the B field.
+              Can be a 1D array of size 3 or a 2D array of size (3, n).
+    :param v: the other perpendicular unit vector in the plane perpendicular to the B field.
+              Can be a 1D array of size 3 or a 2D array of size (3, n).
+    :param c: the sensitivity of the coil.
+              Can be a 1D array of size 3 or a 2D array of size (3, n).
+    :return: eta values.
     """
 
-    return np.sqrt(np.dot(u, c) ** 2 * np.dot(v, c) ** 2)
+    # Ensure arrays are 2D for consistent processing
+    if u.ndim == 1:
+        u = u[:, np.newaxis]
+    if v.ndim == 1:
+        v = v[:, np.newaxis]
+    if c.ndim == 1:
+        c = c[:, np.newaxis]
+
+    # Calculate the dot products
+    dot_u_c = np.einsum('ij,ij->j', u, c)
+    dot_v_c = np.einsum('ij,ij->j', v, c)
+
+    # Calculate eta
+    eta = np.sqrt(dot_u_c ** 2 * dot_v_c ** 2)
+
+    return eta
 
 
 def get_phi(u, v, c):
     """
-    Calculate the phi value
-    :param u: one perpendicular unit vector in the plane perpendicular to the B field
-    :param v: the other perpendicular unit vector in the plane perpendicular to the B field
-    :param c: the sensitivity of the coil
-    :return:
+    Calculate the phi value.
+    :param u: one perpendicular unit vector in the plane perpendicular to the B field.
+              Can be a 1D array of size 3 or a 2D array of size (3, n).
+    :param v: the other perpendicular unit vector in the plane perpendicular to the B field.
+              Can be a 1D array of size 3 or a 2D array of size (3, n).
+    :param c: the sensitivity of the coil.
+              Can be a 1D array of size 3 or a 2D array of size (3, n).
+    :return: phi values.
     """
 
-    return np.arctan2(np.dot(u, c), np.dot(v, c))
+    # Ensure arrays are 2D for consistent processing
+    if u.ndim == 1:
+        u = u[:, np.newaxis]
+    if v.ndim == 1:
+        v = v[:, np.newaxis]
+    if c.ndim == 1:
+        c = c[:, np.newaxis]
+
+    # Calculate the dot products
+    dot_u_c = np.einsum('ij,ij->j', u, c)
+    dot_v_c = np.einsum('ij,ij->j', v, c)
+
+    # Calculate phi
+    phi = np.arctan2(dot_u_c, dot_v_c)
+
+    return phi
 
 
 def detection(t, eta, d_omega, phi, T1=None, T2=None):
