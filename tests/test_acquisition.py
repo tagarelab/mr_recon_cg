@@ -53,3 +53,22 @@ class TestAcquisition(TestCase):
                            expected_phi_2d), f"2D phi test failed: {phi_2d} != {expected_phi_2d}"
 
         print("All tests passed!")
+
+    def test_detection(self):
+        t = np.array([0, 1, 2, 3])
+        eta = np.array([1, 2])
+        d_omega = np.array([0.1, 0.2])
+        phi = np.array([0, np.pi / 4])
+        T2 = np.array([10, 20])
+
+        expected_signal_shape = (4,)
+
+        signal = acq.detection(t, eta, d_omega, phi, T2=T2)
+
+        # Check shape
+        assert signal.shape == expected_signal_shape, f"Shape mismatch: expected {expected_signal_shape}, got {signal.shape}"
+
+        # Check values manually or compare with expected values calculated separately
+        # Add further checks as needed to validate the computation
+
+        print("All tests passed!")

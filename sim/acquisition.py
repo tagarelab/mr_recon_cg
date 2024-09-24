@@ -32,7 +32,7 @@ def detect_signal(M, B, c, t, T1=None, T2=None):
     phi = get_phi(u, v, c)
 
     # Get the d_omega value
-    d_omega = np.dot(B, c)
+    d_omega = np.einsum('ij,ij->j', B, c)
 
     # Get the signal
     signal = detection(t, eta, d_omega, phi, T1, T2)
@@ -51,6 +51,10 @@ def get_eta(u, v, c):
               Can be a 1D array of size 3 or a 2D array of size (3, n).
     :return: eta values.
     """
+
+    # Ensure input arrays have the same shape
+    if u.shape != v.shape or u.shape != c.shape:
+        raise ValueError("Input vectors u, v, and c must have the same dimensions")
 
     # Ensure arrays are 2D for consistent processing
     if u.ndim == 1:
@@ -82,6 +86,10 @@ def get_phi(u, v, c):
     :return: phi values.
     """
 
+    # Ensure input arrays have the same shape
+    if u.shape != v.shape or u.shape != c.shape:
+        raise ValueError("Input vectors u, v, and c must have the same dimensions")
+
     # Ensure arrays are 2D for consistent processing
     if u.ndim == 1:
         u = u[:, np.newaxis]
@@ -103,17 +111,38 @@ def get_phi(u, v, c):
 def detection(t, eta, d_omega, phi, T1=None, T2=None):
     """
     Calculate the signal at time t
-    :param t:
-    :param eta:
-    :param d_omega:
-    :param phi:
-    :param T1: #TODO: add function for T1 dephasing?
-    :param T2:
-    :return:
+    :param t: 1D array with length n
+    :param eta: 1D array with length m
+    :param d_omega: 1D array with length m
+    :param phi: 1D array with length m
+    :param T1: Optional, not used in current function
+    :param T2: 1D array with length m
+    :return: 2D array with shape (m, n)
     """
-    signal = 0.5 * eta * np.exp(1j * (d_omega * t - phi))
+
+    # Ensure input arrays are 1D
+    t = np.atleast_1d(t)
+    eta = np.atleast_1d(eta)
+    d_omega = np.atleast_1d(d_omega)
+    phi = np.atleast_1d(phi)
+
     if T2 is not None:
-        signal = signal * np.exp(-t / T2)
+        T2 = np.atleast_1d(T2)
+
+    # Validate input dimensions
+    if not (len(eta) == len(d_omega) == len(phi) and (T2 is None or len(T2) == len(eta))):
+        raise ValueError("eta, d_omega, phi, and T2 must be vectors of the same length")
+
+    # Use broadcasting to calculate the signal matrix
+    signal = 0.5 * eta[:, np.newaxis] * np.exp(
+        1j * (d_omega[:, np.newaxis] * t[np.newaxis, :] - phi[:, np.newaxis]))
+
+    if T2 is not None:
+        signal *= np.exp(-t[np.newaxis, :] / T2[:, np.newaxis])
+
+    # sum up the signal from all voxels
+    signal = np.sum(signal, axis=0)
+
     return signal
 
 
