@@ -12,6 +12,36 @@ from scipy.interpolate import RegularGridInterpolator
 import warnings
 
 
+def create_perpendicular_unit_vectors(w):
+    """
+    Given a 3D vector w, return three unit vectors u, v, w such that:
+    - w is the unit vector with the same direction as w (the input vector)
+    - u and v are perpendicular to each other and to w
+
+    This function is drafted by Clarity and edited & tested by the author.
+    """
+    # Normalize the vector w
+    w = w / np.linalg.norm(w)
+
+    # Create a vector that is not parallel to w to ensure we can create a perpendicular vector
+    if np.allclose(w, [1, 0, 0]):
+        # w is parallel to the x-axis, choose the y-axis
+        temp_vector = np.array([0, 1, 0])
+    else:
+        # otherwise, choose the x-axis
+        temp_vector = np.array([1, 0, 0])
+
+    # Use the cross product to find a vector that is perpendicular to w
+    u = np.cross(w, temp_vector)
+    u = u / np.linalg.norm(u)
+
+    # Use the cross product to find the third vector that is perpendicular to both w and u
+    v = np.cross(w, u)
+    v = v / np.linalg.norm(v)
+
+    return u, v, w
+
+
 def auto_corr(signal, max_lag=10):
     """
     Calculate the autocorrelation of the signal

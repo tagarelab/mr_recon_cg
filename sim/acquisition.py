@@ -12,6 +12,75 @@ import algebra as algb
 __all__ = ['slice_select', 'B1_effective']
 
 
+def detect_signal(M, B, c, t, T1=None, T2=None):
+    """
+    Detect the signal at time t
+    :param M: the magnetization
+    :param B: the magnetic field
+    :param c: the sensitivity of the coil
+    :param t: the time point
+    :param T1: the T1 relaxation time
+    :param T2: the T2 relaxation time
+    :return:
+    """
+
+    # Get the perpendicular unit vectors
+    u, v = algb.create_perpendicular_unit_vectors(B)
+
+    # Get the eta and phi values
+    eta = get_eta(u, v, c)
+    phi = get_phi(u, v, c)
+
+    # Get the d_omega value
+    d_omega = np.dot(B, c)
+
+    # Get the signal
+    signal = detection(t, eta, d_omega, phi, T1, T2)
+
+    return signal
+
+
+def get_eta(u, v, c):
+    """
+    Calculate the eta value
+    :param u: one perpendicular unit vector in the plane perpendicular to the B field
+    :param v: the other perpendicular unit vector in the plane perpendicular to the B field
+    :param c: the sensitivity of the coil
+    :return:
+    """
+
+    return np.sqrt(np.dot(u, c) ** 2 * np.dot(v, c) ** 2)
+
+
+def get_phi(u, v, c):
+    """
+    Calculate the phi value
+    :param u: one perpendicular unit vector in the plane perpendicular to the B field
+    :param v: the other perpendicular unit vector in the plane perpendicular to the B field
+    :param c: the sensitivity of the coil
+    :return:
+    """
+
+    return np.arctan2(np.dot(u, c), np.dot(v, c))
+
+
+def detection(t, eta, d_omega, phi, T1=None, T2=None):
+    """
+    Calculate the signal at time t
+    :param t:
+    :param eta:
+    :param d_omega:
+    :param phi:
+    :param T1: #TODO: add function for T1 dephasing?
+    :param T2:
+    :return:
+    """
+    signal = 0.5 * eta * np.exp(1j * (d_omega * t - phi))
+    if T2 is not None:
+        signal = signal * np.exp(-t / T2)
+    return signal
+
+
 def B1_effective(B1, B0):
     """
     Calculate the effective B1 field

@@ -208,6 +208,24 @@ acq_time = dt * 100  # ms
 # TODO: there is a time between the excitation and the acquisition window
 t = np.arange(0, acq_time, dt)  # ms
 
+
+class detection_op:
+    def __init__(self, B_mat, sensi_mat, T1_mat, T2_mat):
+        self.B = B_mat
+        self.C = sensi_mat
+        self.T1 = T1_mat
+        self.T2 = T2_mat
+        self.omega = gamma * np.linalg.norm(self.B, axis=0)
+
+    def forward(self, x):
+        # for each magnetization point and time point, calculate the signal
+
+        return self.A * x
+
+    def transpose(self, x):
+        return self.forward(x)
+
+
 # M_t_mat = dp.M_t_operator(T1_VOI, T2_VOI, t)
 # D = ops.hadamard_op_expand(M_t_mat)
 

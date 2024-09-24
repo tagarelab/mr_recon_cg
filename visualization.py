@@ -244,6 +244,7 @@ def quiver3d(vector, orig=None, label=None, xlim=None, ylim=None, zlim=None, tit
     ax.axis('equal')
     set_limit_title(ax=ax, xlim=xlim, ylim=ylim, zlim=zlim, title=title, xlabel='X', ylabel='Y', zlabel='Z')
     ax.legend()
+    plt.show()
     return fig
 
 

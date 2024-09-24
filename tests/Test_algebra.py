@@ -59,7 +59,8 @@ class TestAlgebra(unittest.TestCase):
         z_arr = np.arange(3)
 
         # Use interp_3dmat to transform them into a 3D mesh with new dimensions
-        interpolated_matrix, X_intrp, Y_intrp, Z_intrp = algebra.interp_3dmat(M, x_arr, y_arr, z_arr, 6, 6, 6)
+        interpolated_matrix, X_intrp, Y_intrp, Z_intrp = algebra.interp_3dmat(M, x_arr, y_arr,
+                                                                              z_arr, 6, 6, 6)
 
         # Check if the output dimensions are correct
         assert interpolated_matrix.shape == (6, 6, 6)
@@ -124,3 +125,17 @@ class TestAlgebra(unittest.TestCase):
         :return:
         """
         x = np.array([1, 2, 3, 4, 5])
+
+    def test_create_pserpendicular_unit_vectors(self):
+        w = np.array([1, 2, 3])
+        u, v, unit_w = algebra.create_perpendicular_unit_vectors(w)
+
+        # Check if the output vectors are perpendicular to each other
+        tolerance = 1e-6
+        assert np.isclose(np.dot(u, v), 0, atol=tolerance), f"u . v = {np.dot(u, v)}"
+        assert np.isclose(np.dot(u, unit_w), 0, atol=tolerance), f"u . w = {np.dot(u, unit_w)}"
+        assert np.isclose(np.dot(v, unit_w), 0, atol=tolerance), f"v . w = {np.dot(v, unit_w)}"
+
+        # Plot the vectors
+        vis.quiver3d(np.array([u, v, w]).T, xlim=[-1, 1], ylim=[-1, 1], zlim=[-1, 1],
+                     label=['u', 'v', 'w'], title='Perpendicular Unit Vectors')
