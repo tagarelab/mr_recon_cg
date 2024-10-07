@@ -10,13 +10,53 @@ import numpy as np
 import scipy as sp
 from scipy.interpolate import RegularGridInterpolator
 import warnings
+import visualization as vis
 
 
-def create_perpendicular_unit_vectors(w):
+def get_rotation_to_vector(vectors, target_vectors):
+    vectors = np.array(vectors)
+    target_vectors = np.array(target_vectors)
+
+    if vectors.shape[0] != 3:
+        raise ValueError('Input vectors must be of shape (3, n)')
+    if target_vectors.shape[0] != 3:
+        raise ValueError('Target vector must be of shape (3, n) or (3,)')
+    if len(target_vectors.shape) == 1 or target_vectors.shape[1] == 1:
+        target_vectors = np.tile(target_vectors, (1, vectors.shape[1]))
+
+    # Initialize arrays to store axes and angles
+    axes = np.zeros(vectors.shape)
+    angles = np.ones(vectors.shape[1]) * np.pi
+
+    for i in range(vectors.shape[1]):
+        v = vectors[:, i]
+        t = target_vectors[:, i]
+        t_norm = np.linalg.norm(t)
+        v_norm = np.linalg.norm(v)
+        if t_norm == 0:
+            raise ValueError('Target vector cannot be zero.')
+        elif v_norm == 0:
+            axes[:, i] = np.array([1, 0, 0])
+            angles[i] = 0  # no rotation, any axis will do
+            # raise ValueError('Zero-vector has no direction and cannot be rotated')
+        else:
+            axis = (v / v_norm + t / t_norm) / 2
+            axes[:, i] = axis / np.linalg.norm(axis)
+
+        # vis.quiver3d(np.array([v, t, axes[:, i]]).T,
+        #              xlim=[-2, 2], ylim=[-2, 2], zlim=[-2, 2],
+        #              label=[f'Orig{v}', f'Target{axes[:, i]}', f'Rot Axis{axes[:, i]}'],
+        #              title='Rotation Axis')
+
+    return axes, angles
+
+
+def create_perpendicular_unit_vectors(w, m=None):
     """
     Given an array of 3D vectors w, return three arrays of unit vectors u, v, w such that:
     - w is the unit vector with the same direction as w (the input vectors)
     - u and v are perpendicular to each other and to w
+    - if m is provided, u is pointing in the direction of m
 
     :param w: array of 3D vectors with shape (3, n)
     :return: three arrays of unit vectors u, v, w each with shape (3, n)
@@ -31,34 +71,65 @@ def create_perpendicular_unit_vectors(w):
     w = np.atleast_2d(w)
     assert w.shape[0] == 3, "Input must be an array with the first dimension of size 3"
 
-    # Normalize all vectors w
-    w_norms = np.linalg.norm(w, axis=0)
-    w_unit = w / w_norms
+    # # Normalize all vectors w
+    # w_norms = np.linalg.norm(w, axis=0)
+    # w_unit = w / w_norms
+    #
+    # u_unit = np.empty_like(w_unit)
+    # v_unit = np.empty_like(w_unit)
+    #
+    # for i in range(w_unit.shape[1]):
+    #     wi = w_unit[:, i]
+    #
+    #     # Create a vector that is not parallel to wi to ensure we can create a perpendicular vector
+    #     if np.allclose(wi, [1, 0, 0]):
+    #         # wi is parallel to the x-axis, choose the y-axis
+    #         temp_vector = np.array([0, 1, 0])
+    #     else:
+    #         # otherwise, choose the x-axis
+    #         temp_vector = np.array([1, 0, 0])
+    #
+    #     # Use the cross product to find a vector that is perpendicular to wi
+    #     ui = np.cross(wi, temp_vector)
+    #     ui = ui / np.linalg.norm(ui)
+    #
+    #     # Use the cross product to find the third vector that is perpendicular to both wi and ui
+    #     vi = np.cross(wi, ui)
+    #     vi = vi / np.linalg.norm(vi)
+    #
+    #     u_unit[:, i] = ui
+    #     v_unit[:, i] = vi
 
-    u_unit = np.empty_like(w_unit)
-    v_unit = np.empty_like(w_unit)
+    # Normalize w to get the unit vector w
+    w_norm = np.linalg.norm(w, axis=0)
+    w_unit = w / w_norm
+
+    # Initialize u and v arrays
+    u_unit = np.zeros_like(w_unit)
+    v_unit = np.zeros_like(w_unit)
 
     for i in range(w_unit.shape[1]):
-        wi = w_unit[:, i]
+        w_i = w_unit[:, i]
 
-        # Create a vector that is not parallel to wi to ensure we can create a perpendicular vector
-        if np.allclose(wi, [1, 0, 0]):
-            # wi is parallel to the x-axis, choose the y-axis
-            temp_vector = np.array([0, 1, 0])
+        # Choose or compute m
+        if m is not None:
+            m_i = np.asarray(m)[:, i]
         else:
-            # otherwise, choose the x-axis
-            temp_vector = np.array([1, 0, 0])
+            # If no m is provided, use a default vector that is unlikely to be parallel to w
+            m_i = np.array([1.0, 0.0, 0.0])
+            if np.allclose(w_i, m_i):
+                m_i = np.array([0.0, 1.0, 0.0])
 
-        # Use the cross product to find a vector that is perpendicular to wi
-        ui = np.cross(wi, temp_vector)
-        ui = ui / np.linalg.norm(ui)
+        # Compute u by removing the component of m along w
+        u_i = m_i - np.dot(m_i, w_i) * w_i
+        u_i = u_i / np.linalg.norm(u_i)
 
-        # Use the cross product to find the third vector that is perpendicular to both wi and ui
-        vi = np.cross(wi, ui)
-        vi = vi / np.linalg.norm(vi)
+        # Compute v as the cross product of w and u
+        v_i = np.cross(w_i, u_i)
+        v_i = v_i / np.linalg.norm(v_i)
 
-        u_unit[:, i] = ui
-        v_unit[:, i] = vi
+        u_unit[:, i] = u_i
+        v_unit[:, i] = v_i
 
     # If the original input was a single vector, return a tuple of unit vectors
     if single_vector:
@@ -116,6 +187,31 @@ def db_to_linear(x):
     return 10 ** (x / 20)
 
 
+# def parallel_component(v, u):
+#     """
+#     Calculate the parallel component of vector v to vector u.
+#     np.dot(v, u) / np.linalg.norm(u) is the parallel component of v to u.
+#     u / np.linalg.norm(u) is the unit vector of u.
+#     The parallel component of v to u is then multiplied by the unit vector of u.
+#
+#     :param v: vector v
+#     :param u: vector u
+#     :return: parallel component of vector v to vector u
+#     """
+#     return np.dot(v, u) / np.linalg.norm(u) ** 2 * u
+#
+#
+# def perpendicular_component(v, u):
+#     """
+#     Calculate the perpendicular component of vector v to vector u.
+#
+#     :param v: vector v
+#     :param u: vector u
+#     :return: perpendicular component of vector v to vector u
+#     """
+#     return v - parallel_component(v, u)
+
+
 def parallel_component(v, u):
     """
     Calculate the parallel component of vector v to vector u.
@@ -123,22 +219,55 @@ def parallel_component(v, u):
     u / np.linalg.norm(u) is the unit vector of u.
     The parallel component of v to u is then multiplied by the unit vector of u.
 
-    :param v: vector v
-    :param u: vector u
+    :param v: vector v or an array/matrix of vectors with the first dimension of size 3.
+    :param u: vector u or an array/matrix of vectors with the first dimension of size 3.
     :return: parallel component of vector v to vector u
     """
-    return np.dot(v, u) / np.linalg.norm(u) ** 2 * u
+
+    # Check dimensions and ensure consistent shape
+    if not (v.shape == u.shape and v.shape[0] == 3):
+        raise ValueError(
+            "Input vectors v and u must have the same shape with the first dimension of size 3")
+
+    # Reshape to handle both 1D and 2D/3D cases
+    if v.ndim == 1:
+        v = v[:, np.newaxis]
+        u = u[:, np.newaxis]
+
+    # Calculate the dot product element-wise
+    dot_product = np.einsum('ij...,ij...->j...', v, u)
+
+    # Calculate the norm of u
+    norm_u = np.linalg.norm(u, axis=0)
+
+    # Calculate the parallel component element-wise
+    parallel_comp = (dot_product / norm_u ** 2) * u
+
+    # Return the result in the original shape
+    if v.shape[1] == 1:
+        return parallel_comp[:, 0]
+
+    return parallel_comp
 
 
 def perpendicular_component(v, u):
     """
     Calculate the perpendicular component of vector v to vector u.
 
-    :param v: vector v
-    :param u: vector u
+    :param v: vector v or an array/matrix of vectors with the first dimension of size 3.
+    :param u: vector u or an array/matrix of vectors with the first dimension of size 3.
     :return: perpendicular component of vector v to vector u
     """
-    return v - parallel_component(v, u)
+
+    # Check dimensions and ensure consistent shape
+    if not (v.shape == u.shape and v.shape[0] == 3):
+        raise ValueError(
+            "Input vectors v and u must have the same shape with the first dimension of size 3")
+
+    # Calculate the perpendicular component as v - parallel_component(v, u)
+    perpendicular_comp = v - parallel_component(v, u)
+
+    return perpendicular_comp
 
 
 def rot_mat(u, theta):

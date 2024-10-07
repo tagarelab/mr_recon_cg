@@ -18,6 +18,8 @@ if __name__ == '__main__':
 
 
 class TestAlgebra(unittest.TestCase):
+    def test_parallel_component(self):
+        self.fail()
 
     def test_rot_mat(self):
         """
@@ -25,9 +27,9 @@ class TestAlgebra(unittest.TestCase):
         :return:
         """
 
-        orig_vec = np.array([1, 1, 1])
+        orig_vec = np.array([1, 1, 0])
         rot_axis = np.array([0, 0, 1]) * 2
-        theta = -90
+        theta = 180
 
         # Create a rotation matrix
         rot_mat = algebra.rot_mat(rot_axis, theta * np.pi / 180)
@@ -36,12 +38,16 @@ class TestAlgebra(unittest.TestCase):
         assert rot_mat.shape == (3, 3)
 
         new_vec = np.matmul(rot_mat, orig_vec)
+        print("New vector: ", new_vec)
 
         # Check if the new vector is correct
         vis.quiver3d(np.array([orig_vec, new_vec, rot_axis]).T,
                      xlim=[-2, 2], ylim=[-2, 2], zlim=[-2, 2],
                      label=['Orig', 'Rotated', 'Rot Axis'],
                      title='Rotated ' + str(theta) + ' degrees')
+
+        # Check if the before and after has the same length
+        assert np.isclose(np.linalg.norm(orig_vec), np.linalg.norm(new_vec), atol=1e-6)
 
         # Check if the rotation matrix is correct
         # np.testing.assert_array_equal(rot_mat, np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]))
@@ -174,3 +180,32 @@ class TestAlgebra(unittest.TestCase):
                               atol=tolerance), f"Vectors v and w are not perpendicular for vector {i}: dot(v, w) = {np.dot(v_2d[:, i], w_2d_norm[:, i])}"
 
         print("All tests passed!")
+
+    def test_get_rotation_to_vector(self):
+        # random vectors
+        vectors = (np.random.rand(3, 4) - 0.5) * 2
+        target_vectors = (np.random.rand(3, 4) - 0.5) * 2
+        axes, angles = algebra.get_rotation_to_vector(vectors, target_vectors)
+        print("Axes of rotation:\n", axes)
+        print("Angles of rotation:\n", angles)
+
+        # Use rotation matrix to rotate the vectors
+        rotated_vectors = np.zeros(vectors.shape)
+        for i in range(vectors.shape[1]):
+            rotated_vectors[:, i] = np.dot(algebra.rot_mat(axes[:, i], angles[i]), vectors[:, i])
+
+        # Check if the vectors are rotated to the target vector
+        for i in range(vectors.shape[1]):
+            vis.quiver3d(np.array([vectors[:, i], rotated_vectors[:, i], target_vectors[:, i],
+                                   axes[:, i]]).T,
+                         xlim=[-1, 1], ylim=[-1, 1], zlim=[-1, 1],
+                         label=['Orig', 'Rotated', 'Target', 'Rot Axis'],
+                         title='Rotated to Target Vector')
+            # assert same direction
+            assert np.allclose(np.dot(rotated_vectors[:, i], target_vectors[:, i]),
+                               np.linalg.norm(rotated_vectors[:, i]) *
+                               np.linalg.norm(target_vectors[:, i])), \
+                "Vectors are not in the same direction"
+            # assert same length
+            assert np.isclose(np.linalg.norm(rotated_vectors[:, i]), np.linalg.norm(vectors[:, i]),
+                              atol=1e-6)
