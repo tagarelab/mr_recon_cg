@@ -346,17 +346,17 @@ class phase_encoding_op:
         # TODO: define gyro_ratio as a global variable
         axes, angles = algb.get_rotation_to_vector(vectors=B_net,
                                                    target_vectors=[0, 0, 1])
-        self.rot_z = rotation_op(axes, angles)  # rotate B_net_VOI to z-axis
+        rot_z = rotation_op(axes, angles)  # rotate B_net_VOI to z-axis
 
-        evol_angle = (gyro_ratio * self.rot_z.forward(B_net)[2, :] - larmor_freq) * t_PE * np.pi * 2
-        self.evol_rot = rotation_op(np.array([0, 0, 1]), evol_angle)
+        evol_angle = (gyro_ratio * rot_z.forward(B_net)[2, :] - larmor_freq) * t_PE * np.pi * 2
+        evol_rot = rotation_op(np.array([0, 0, 1]), evol_angle)
+        self.pe_rot = ops.composite_op(ops.transposed_op(rot_z), evol_rot, rot_z)
 
     def forward(self, x):
-        return self.rot_z.transpose(self.evol_rot.forward(self.rot_z.forward(x)))
-        # TODO: speed this up
+        return self.pe_rot.forward(x)
 
     def transpose(self, x):
-        return self.rot_z.transpose(self.evol_rot.transpose(self.rot_z.forward(x)))
+        return self.pe_rot.transpose(x)
 
 
 # t_PE = 1e-4  # change this to the actual time
@@ -488,8 +488,8 @@ M_PE = PE.forward(M_excited)
 #               ylim=ylim, zlim=zlim, title='Dummy M_SI', mask=VOI)
 # vis.scatter3d(X_axis, Y_axis, Z_axis, M_dummy[2, :], xlim=xlim,
 #               ylim=ylim, zlim=zlim, title='Dummy M_AP', mask=VOI)
-# vis.scatter3d(X_axis, Y_axis, Z_axis, M_PE[0, :], xlim=xlim,
-#               ylim=ylim, zlim=zlim, title='Phase Encoded M_LR', mask=VOI)
+vis.scatter3d(X_axis, Y_axis, Z_axis, M_PE[0, :], xlim=xlim,
+              ylim=ylim, zlim=zlim, title='Phase Encoded M_LR', mask=VOI)
 # vis.scatter3d(X_axis, Y_axis, Z_axis, M_PE[1, :], xlim=xlim,
 #               ylim=ylim, zlim=zlim, title='Phase Encoded M_SI', mask=VOI)
 # vis.scatter3d(X_axis, Y_axis, Z_axis, M_PE[2, :], xlim=xlim,
