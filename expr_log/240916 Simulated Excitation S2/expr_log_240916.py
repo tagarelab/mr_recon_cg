@@ -317,28 +317,22 @@ B_FE_VOI = Glr_VOI * DC_Glr + np.repeat(np.expand_dims(np.array([1, 0, 0]), axis
 # B_net_axes, B_net_angles = algb.get_rotation_to_vector(vectors=B_net_VOI, target_vectors=[0, 0, 1])
 
 class rotation_op:
-    # TODO: test this
     def __init__(self, axes, angles):
         if len(np.array(axes).shape) == 1:
             axes = np.repeat(np.expand_dims(axes, axis=1), len(angles), axis=1)
-        self.axes = np.array(axes)
-        self.angles = np.array(angles)
-        self.len = len(self.angles)
-        # create a dictionary of rotation matrices
+        # Precompute all rotation matrices
+        self.rot_mats = np.array(
+            [algb.rot_mat(np.array(axes)[:, i], np.array(angles)[i]) for i in range(
+                len(np.array(angles)))])
 
     def forward(self, x):
-        x_rot = np.zeros(x.shape)
-        for i in range(self.len):
-            rot_mat_i = algb.rot_mat(self.axes[:, i], self.angles[i])
-            x_rot[:, i] = rot_mat_i @ x[:, i]
-        return x_rot
+        # Assumes x of shape (n, self.len)
+        return np.einsum('ijk,ki->ji', self.rot_mats, x)
 
     def transpose(self, x):
-        x_rot = np.zeros(x.shape)
-        for i in range(self.len):
-            rot_mat_i = algb.rot_mat(self.axes[:, i], self.angles[i])
-            x_rot[:, i] = rot_mat_i.T @ x[:, i]
-        return x_rot
+        # Assumes x of shape (n, self.len)
+        rot_mats_T = np.transpose(self.rot_mats, (0, 2, 1))
+        return np.einsum('ijk,ki->ji', rot_mats_T, x)
 
 
 class phase_encoding_op:
