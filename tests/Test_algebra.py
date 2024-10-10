@@ -185,9 +185,35 @@ class TestAlgebra(unittest.TestCase):
         # random vectors
         vectors = (np.random.rand(3, 4) - 0.5) * 2
         target_vectors = (np.random.rand(3, 4) - 0.5) * 2
+        target_vector = [0, 0, 1]
+
+        # test the situation where there is only one target
+        axes, angles = algebra.get_rotation_to_vector(vectors, target_vector)
+        # Use rotation matrix to rotate the vectors
+        rotated_vectors = np.zeros(vectors.shape)
+        for i in range(vectors.shape[1]):
+            rotated_vectors[:, i] = np.dot(algebra.rot_mat(axes[:, i], angles[i]), vectors[:, i])
+
+        # Check if the vectors are rotated to the target vector
+        for i in range(vectors.shape[1]):
+            vis.quiver3d(np.array([vectors[:, i], rotated_vectors[:, i], target_vector,
+                                   axes[:, i]]).T,
+                         xlim=[-1, 1], ylim=[-1, 1], zlim=[-1, 1],
+                         label=['Orig', 'Rotated', 'Target', 'Rot Axis'],
+                         title='Rotated to Target Vector')
+            # assert same direction
+            assert np.allclose(np.dot(rotated_vectors[:, i], target_vector),
+                               np.linalg.norm(rotated_vectors[:, i]) *
+                               np.linalg.norm(target_vector)), \
+                "Vectors are not in the same direction"
+            # assert same length
+            assert np.isclose(np.linalg.norm(rotated_vectors[:, i]), np.linalg.norm(vectors[:, i]),
+                              atol=1e-6)
+
+        # test the situation where there are multiple targets
         axes, angles = algebra.get_rotation_to_vector(vectors, target_vectors)
-        print("Axes of rotation:\n", axes)
-        print("Angles of rotation:\n", angles)
+        # print("Axes of rotation:\n", axes)
+        # print("Angles of rotation:\n", angles)
 
         # Use rotation matrix to rotate the vectors
         rotated_vectors = np.zeros(vectors.shape)

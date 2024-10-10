@@ -22,6 +22,8 @@ def get_rotation_to_vector(vectors, target_vectors):
     if target_vectors.shape[0] != 3:
         raise ValueError('Target vector must be of shape (3, n) or (3,)')
     if len(target_vectors.shape) == 1 or target_vectors.shape[1] == 1:
+        if len(target_vectors.shape) == 1:
+            target_vectors = target_vectors[:, np.newaxis]
         target_vectors = np.tile(target_vectors, (1, vectors.shape[1]))
 
     # Initialize arrays to store axes and angles

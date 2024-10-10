@@ -16,7 +16,7 @@ def detect_signal(M, B, c, t, T1=None, T2=None):
     """
     Detect the signal at time t
     :param M: the magnetization
-    :param B: the magnetic field
+    :param B: the net magnetic field: B0 + B_grad that is on during acquisition
     :param c: the sensitivity of the coil
     :param t: the time point
     :param T1: the T1 relaxation time
@@ -24,8 +24,16 @@ def detect_signal(M, B, c, t, T1=None, T2=None):
     :return:
     """
 
+    # Change coordinates to net B point to z-axis for M and C
+    M_uv = algb.rot_mat()  # TODO: take this out of this function so we have the transpose of rotation matrix for the inverse transformation
+    # TODO: the final operation should not have M in there
+
     # Get the perpendicular unit vectors
-    u, v = algb.create_perpendicular_unit_vectors(B)
+    u, v = algb.create_perpendicular_unit_vectors(B, M)
+
+    M_u = algb.parallel_component(M, u)
+    M_v = algb.parallel_component(M, v)
+
 
     # Get the eta and phi values
     eta = get_eta(u, v, c)

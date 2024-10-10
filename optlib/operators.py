@@ -88,8 +88,8 @@ class hadamard_op:
     def forward(self,x):
         return self.A*x
     def transpose(self,x):
-        return self.forward(x)
-
+        # return self.forward(x)  #TODO: check with Hemant about this: is this conjugate transpose?
+        return np.conj(self.A) * x
 
 class hadamard_op_expand:
     """
