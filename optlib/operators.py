@@ -27,6 +27,33 @@ class zero_op:
     def transpose(self,x):
         return 0.0
 
+
+class identity_op:
+    """
+        Returns x
+    """
+
+    def forward(self, x):
+        return x
+
+    def transpose(self, x):
+        return x
+
+
+class transposed_op:
+    """
+        Returns the transpose of the original operator
+    """
+
+    def __init__(self, op):
+        self.op = op
+
+    def forward(self, x):
+        return self.op.transpose(x)
+
+    def transpose(self, x):
+        return self.op.forward(x)
+
 class matrix_op:
     """
         matrix_op(A) converts the matrix A to a matrix 
