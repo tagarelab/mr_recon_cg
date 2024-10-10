@@ -70,9 +70,9 @@ if generate_new_data:
                               intrp_pts, method='linear')
     B1_z = algb.interp_by_pts(B1_data[2, :, :, :], x_b1_raw, y_b1_raw, z_b1_raw,
                               intrp_pts, method='linear')
-    # B1_raw = np.array([B1_x, B1_y, B1_z])
-    B1_raw = np.array(
-        [np.ones(B1_x.shape), np.zeros(B1_x.shape), np.zeros(B1_x.shape)])  #TODO: just for testing
+    B1_raw = np.array([B1_x, B1_y, B1_z])
+    # B1_raw = np.array(
+    #     [np.ones(B1_x.shape), np.zeros(B1_x.shape), np.zeros(B1_x.shape)])  # TODO: just for testing
 
     # %% Generate Mask and Phantom
     # Breast Mask
@@ -150,8 +150,8 @@ if generate_new_data:
                                                                                                1])
 
     # visualize
-    # vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(Glr_raw, axis=0), xlim=xlim, ylim=ylim,
-    #               zlim=zlim, title='Glr (T)')
+    # vis.scatter3d(X_axis, Y_axis, Z_axis, Glr_raw[0,:], xlim=xlim, ylim=ylim,
+    #                   zlim=zlim, title='LR component of Glr (T)',mask=breast_mask&slice)
 
     # %% save the data
     dict = {'B0': B0_raw, 'B1': B1_raw, 'Glr': Glr_raw, 'Gsi': Gsi_raw, 'phantom': phantom,
@@ -285,12 +285,16 @@ E = ops.hadamard_matrix_op(rot_mat)  # TODO: check this
 sensi_mat = np.diag(B1_eff)
 C = ops.hadamard_op(sensi_mat)  # TODO: what is the coil sensitivity matrix for our receiving coil?
 Sensi_VOI = np.ones(shape=B1_VOI.shape)
+Sensi_VOI = np.expand_dims(Sensi_VOI, axis=2)  # in case we have multiple coils
 
 # %% Dephasing
-dt = 5e-6  # s
-acq_time = dt * 100  # s
+# dt = 5e-6  # s
+# acq_time = dt * 100  # s
+dt = 2.5e-4  # s
+acq_time = dt * 60  # s
+
 # TODO: there is a time between the excitation and the acquisition window
-t = np.arange(0, acq_time, dt)  # s
+t_acq = np.arange(-acq_time / 2, acq_time / 2, dt)  # s
 # TODO: add dephasing to acquisition
 
 # %% Readout
@@ -300,11 +304,14 @@ Gsi_VOI = Gsi_raw[:, VOI]
 DC_RO = 0.06  # DC_pol when readout
 DC_Glr = 1  # Gx when readout
 DC_Gsi = 1  # Gz when readout   # TODO: should this be an array instead?
-B_PE_VOI = B0_VOI * DC_RO + Gsi_VOI * DC_Gsi  # TODO: what is the B field during PE?
+# B_PE_VOI = B0_VOI * DC_RO + Gsi_VOI * DC_Gsi  # TODO: what is the B field during PE?
 B_PE_VOI = Gsi_VOI * DC_Gsi + np.repeat(np.expand_dims(np.array([1, 0, 0]), axis=1),
                                         B0_VOI.shape[1],
-                                        axis=1) * 24e-3  #TODO: just for testing
-B_FE_VOI = B0_VOI * DC_RO + Glr_VOI * DC_Glr
+                                        axis=1) * 24e-3  # TODO: just for testing
+# B_FE_VOI = B0_VOI * DC_RO + Glr_VOI * DC_Glr
+B_FE_VOI = Glr_VOI * DC_Glr + np.repeat(np.expand_dims(np.array([1, 0, 0]), axis=1),
+                                        B0_VOI.shape[1],
+                                        axis=1) * 24e-3
 
 
 # B_net_axes, B_net_angles = algb.get_rotation_to_vector(vectors=B_net_VOI, target_vectors=[0, 0, 1])
@@ -346,7 +353,7 @@ class phase_encoding_op:
 
     def forward(self, x):
         return self.rot_z.transpose(self.evol_rot.forward(self.rot_z.forward(x)))
-        #TODO: speed this up
+        # TODO: speed this up
 
     def transpose(self, x):
         return self.rot_z.transpose(self.evol_rot.transpose(self.rot_z.forward(x)))
@@ -358,44 +365,61 @@ PE = phase_encoding_op(B_PE_VOI, t_PE)
 
 # %% Detection
 class detection_op:
-    def __init__(self, B_net, sensi_mats, t, larmor_freq=1e6, T1_mat=None, T2_mat=None):
+    def __init__(self, B_net, t, sensi_mats=None, larmor_freq=1e6, T1_mat=None, T2_mat=None):
         axes, angles = algb.get_rotation_to_vector(vectors=B_net,
                                                    target_vectors=[0, 0, 1])  # each output is Np
         self.rot_z = rotation_op(axes, angles)  # rotate B_net_VOI to z-axis
 
-        # initialize coil_eff
-        coil_eff = np.zeros((sensi_mats.shape[1], sensi_mats.shape[2]), dtype=complex)
-
-        # transverse component of the coil sensitivity, Np*Nc
-        for i in sensi_mats.shape[2]:
-            coil_eff[:, i] = np.matmul(self.rot_z.forward(sensi_mats[:, :, i]),
-                                       np.array([1, 1j, 0]))
-            # 3*Np*Nc ->Np*Nc
         # Np
-        delta_omega = gamma * B_net[2, :] - larmor_freq
-        # Nt * Nc * Np
-        TR_encode = np.repeat(np.exp(-1j * np.matmul(np.array(t).T, np.array(delta_omega))),
-                              coil_eff.shape[1], axis=1)
+        delta_omega = gamma * self.rot_z.forward(B_net)[2, :] - larmor_freq
 
-        # initialize TR_encode
-        self.TR_encode = np.zeros((len(t), sensi_mats.shape[2]), dtype=complex)
+        if sensi_mats is not None:
+            # initialize coil_eff
+            coil_eff = self.rot_z.forward(sensi_mats)
 
-        # Nt * Nc * Np
-        for i in sensi_mats.shape[2]:
-            self.TR_encode[:, i] = np.dot(np.repeat(coil_eff[:, i], len(t), axis=1), TR_encode)  #
-            # TODO: fix this!!! test with a dummy example
+            # transverse component of the coil sensitivity, Np*Nc
+            for i in range(sensi_mats.shape[2]):
+                coil_eff[:, i] = np.matmul(sensi_mats[:, :, i], np.array([1, 1j, 0]))
+                # 3*Np*Nc ->Np*Nc
 
-        C = np.repeat(coil_eff, len(t), axis=1)
-        self.TR_encode = np.dot(C, self.TR_encode)
-        # np.repeat(self.TR_encode, sensi_mat.shape[1], axis=0)
-        # TR_encode is now Nt * Nc * Np
-        self.Nc = sensi_mats.shape[2]
+            # Nt * Nc * Np
+            TR_encode = np.repeat(np.exp(-1j * np.matmul(np.array(t).T, np.array(delta_omega))),
+                                  coil_eff.shape[1], axis=1)
+
+            # initialize TR_encode
+            self.TR_encode = np.zeros((len(t), sensi_mats.shape[2]), dtype=complex)
+
+            # Nt * Nc * Np
+            for i in sensi_mats.shape[2]:
+                self.TR_encode[:, i] = np.dot(np.repeat(coil_eff[:, i], len(t), axis=1),
+                                              TR_encode)  #
+                # TODO: fix this!!! test with a dummy example
+
+            C = np.repeat(coil_eff, len(t), axis=1)
+            self.TR_encode = np.dot(C, self.TR_encode)
+            # np.repeat(self.TR_encode, sensi_mat.shape[1], axis=0)
+            # TR_encode is now Nt * Nc * Np
+            self.Nc = sensi_mats.shape[2]
+
+        else:
+            # Nt * Np
+            TR_encode = np.exp(-1j * np.matmul(np.expand_dims(np.array(t), axis=1), np.expand_dims(
+                np.array(delta_omega), axis=0)) * 2 * np.pi)
+
+            # vis.imshow(np.real(TR_encode), name='TR_encode real')
+
+            # initialize TR_encode
+            self.Nc = 1
+            # Nt * Nc * Np
+            self.TR_encode = np.expand_dims(TR_encode, axis=1)
+        self.Nt = len(t)
+        self.Np = B_net.shape[1]
 
     def forward(self, x):
-        x = self.rot_z.forward(x)
-        x = np.matmul(x, np.array([1, 1j, 0]))
+        x = np.complex64(self.rot_z.forward(x))
+        x = np.matmul(np.array([1, 1j, 0]), x)
         # initialize y
-        y = np.zeros((x.shape[0], self.Nc))
+        y = np.zeros((self.Nt, self.Nc), dtype=complex)
         for c in range(self.Nc):
             y[:, c] = np.matmul(self.TR_encode[:, c, :], x)
 
@@ -407,12 +431,14 @@ class detection_op:
     # Change coordinates to net B point to z-axis for M and C
     def transpose(self, y):
         # initialize x
-        x = np.zeros((y.shape[0],))
+        x = np.zeros((self.Np,), dtype=complex)
         for c in range(self.Nc):
             x += np.matmul(self.TR_encode[:, c, :].T, y)  # x should be Np
         x = np.concatenate(np.real(x), np.imag(x), np.zeros(x.shape), axis=0)  # 3*Np
         return self.rot_z.transpose(x)
 
+
+D = detection_op(B_FE_VOI, t_acq)
 
 # %% Acquisition
 # dM/dt for all voxels (thus considering the field inhomogeneity)
@@ -448,25 +474,35 @@ vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(M_excited, axis=0), xlim=xl
 vis.scatter3d(X_axis, Y_axis, Z_axis, M_excited[0, :], xlim=xlim, ylim=ylim,
               zlim=zlim,
               title='Excited Mx', mask=VOI)
-
-# %% Phase Encoding
+#
+# # %% Phase Encoding
 M_PE = PE.forward(M_excited)
 
 # sanity check
-M_dummy = np.repeat(np.expand_dims(np.array([0, 0, 1]), axis=1), M_PE.shape[1], axis=1)
-M_PE = PE.forward(M_dummy)
-vis.scatter3d(X_axis, Y_axis, Z_axis, M_dummy[0, :], xlim=xlim,
-              ylim=ylim, zlim=zlim, title='Dummy M_LR', mask=VOI)
-vis.scatter3d(X_axis, Y_axis, Z_axis, M_dummy[1, :], xlim=xlim,
-              ylim=ylim, zlim=zlim, title='Dummy M_SI', mask=VOI)
-vis.scatter3d(X_axis, Y_axis, Z_axis, M_dummy[2, :], xlim=xlim,
-              ylim=ylim, zlim=zlim, title='Dummy M_AP', mask=VOI)
-vis.scatter3d(X_axis, Y_axis, Z_axis, M_PE[0, :], xlim=xlim,
-              ylim=ylim, zlim=zlim, title='Phase Encoded M_LR', mask=VOI)
-vis.scatter3d(X_axis, Y_axis, Z_axis, M_PE[1, :], xlim=xlim,
-              ylim=ylim, zlim=zlim, title='Phase Encoded M_SI', mask=VOI)
-vis.scatter3d(X_axis, Y_axis, Z_axis, M_PE[2, :], xlim=xlim,
-              ylim=ylim, zlim=zlim, title='Phase Encoded M_AP', mask=VOI)
+# M_dummy = np.repeat(np.expand_dims(np.array([0, 0, 1]), axis=1), O.shape[0], axis=1)
+# M_PE = PE.forward(M_dummy)
+
+# vis.scatter3d(X_axis, Y_axis, Z_axis, M_dummy[0, :], xlim=xlim,
+#               ylim=ylim, zlim=zlim, title='Dummy M_LR', mask=VOI)
+# vis.scatter3d(X_axis, Y_axis, Z_axis, M_dummy[1, :], xlim=xlim,
+#               ylim=ylim, zlim=zlim, title='Dummy M_SI', mask=VOI)
+# vis.scatter3d(X_axis, Y_axis, Z_axis, M_dummy[2, :], xlim=xlim,
+#               ylim=ylim, zlim=zlim, title='Dummy M_AP', mask=VOI)
+# vis.scatter3d(X_axis, Y_axis, Z_axis, M_PE[0, :], xlim=xlim,
+#               ylim=ylim, zlim=zlim, title='Phase Encoded M_LR', mask=VOI)
+# vis.scatter3d(X_axis, Y_axis, Z_axis, M_PE[1, :], xlim=xlim,
+#               ylim=ylim, zlim=zlim, title='Phase Encoded M_SI', mask=VOI)
+# vis.scatter3d(X_axis, Y_axis, Z_axis, M_PE[2, :], xlim=xlim,
+#               ylim=ylim, zlim=zlim, title='Phase Encoded M_AP', mask=VOI)
+
+# %% Detection
+# M_dummy = np.repeat(np.expand_dims(np.array([0, 0, 1]), axis=1), O.shape[0], axis=1)
+# Signal = D.forward(M_dummy)
+Signal = D.forward(M_PE)
+
+vis.complex(Signal, name='Signal')
+vis.plot_against_frequency(Signal, frag_len=len(Signal), dt=dt, name='Image')
+
 # # Dephased Magnetization over time
 # M_0 = np.linalg.norm(M_0[:, :, 0], axis=0)  # TODO: is this the correct M0?
 #
@@ -481,3 +517,4 @@ vis.scatter3d(X_axis, Y_axis, Z_axis, M_PE[2, :], xlim=xlim,
 
 
 # %% Reconstruction
+A = ops.composite_op(P, E, PE, C, D)
