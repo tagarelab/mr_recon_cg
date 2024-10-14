@@ -16,7 +16,7 @@ __all__ = ['rotation_op', 'phase_encoding_op', 'detection_op']
 gamma = 42.58e6  # Gyromagnetic ratio in Hz/T
 
 
-class rotation_op:
+class rotation_op(ops.operator):
     def __init__(self, axes, angles):
         if len(np.array(axes).shape) == 1:
             axes = np.repeat(np.expand_dims(axes, axis=1), len(angles), axis=1)
@@ -24,20 +24,21 @@ class rotation_op:
         self.rot_mats = np.array(
             [algb.rot_mat(np.array(axes)[:, i], np.array(angles)[i]) for i in range(
                 len(np.array(angles)))])
+        self.x_shape = (self.rot_mats.shape[2], self.rot_mats.shape[0])
+        self.y_shape = (self.rot_mats.shape[1], self.rot_mats.shape[0])
 
     def forward(self, x):
         # Assumes x of shape (n, self.len)
         return np.einsum('ijk,ki->ji', self.rot_mats, x)
 
-    def transpose(self, x):
+    def transpose(self, y):
         # Assumes x of shape (n, self.len)
         rot_mats_T = np.transpose(self.rot_mats, (0, 2, 1))
-        return np.einsum('ijk,ki->ji', rot_mats_T, x)
+        return np.einsum('ijk,ki->ji', rot_mats_T, y)
 
 
-class phase_encoding_op:
+class phase_encoding_op(ops.operator):
     def __init__(self, B_net, t_PE, gyro_ratio=gamma, larmor_freq=1e6):
-        # TODO: define gyro_ratio as a global variable
         axes, angles = algb.get_rotation_to_vector(vectors=B_net,
                                                    target_vectors=[0, 0, 1])
         rot_z = rotation_op(axes, angles)  # rotate B_net_VOI to z-axis
@@ -46,14 +47,17 @@ class phase_encoding_op:
         evol_rot = rotation_op(np.array([0, 0, 1]), evol_angle)
         self.pe_rot = ops.composite_op(ops.transposed_op(rot_z), evol_rot, rot_z)
 
+        self.x_shape = self.pe_rot.x_shape
+        self.y_shape = (len(t_PE), B_net.shape[1])
+
     def forward(self, x):
         return self.pe_rot.forward(x)
 
-    def transpose(self, x):
-        return self.pe_rot.transpose(x)
+    def transpose(self, y):
+        return self.pe_rot.transpose(y)
 
 
-class detection_op:
+class detection_op(ops.operator):
     def __init__(self, B_net, t, sensi_mats=None, larmor_freq=1e6, T1_mat=None, T2_mat=None):
         axes, angles = algb.get_rotation_to_vector(vectors=B_net,
                                                    target_vectors=[0, 0, 1])  # each output is Np

@@ -11,12 +11,41 @@
     add_op
 """
 
+from abc import ABC, abstractmethod
+
 
 #########################################################################
 #  Operators
 #  Each operator must be a class with forward and transpose methods
 ###########################################################################
 import numpy as np
+
+
+class operator(ABC):
+    """
+    Abstract class for operators
+    """
+
+    @abstractmethod
+    def __init__(self):
+        self.x_shape = None
+        self.y_shape = None
+
+    @abstractmethod
+    def forward(self, x):
+        pass
+
+    @abstractmethod
+    def transpose(self, y):
+        pass
+
+    def get_x_shape(self):
+        return self.x_shape
+
+    def get_y_shape(self):
+        return self.y_shape
+
+
 
 class zero_op:
     """
