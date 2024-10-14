@@ -18,6 +18,7 @@ gamma = 42.58e6  # Gyromagnetic ratio in Hz/T
 
 class rotation_op(ops.operator):
     def __init__(self, axes, angles):
+        super().__init__()
         if len(np.array(axes).shape) == 1:
             axes = np.repeat(np.expand_dims(axes, axis=1), len(angles), axis=1)
         # Precompute all rotation matrices
@@ -38,7 +39,9 @@ class rotation_op(ops.operator):
 
 
 class phase_encoding_op(ops.operator):
+    # TODO: replace this with a simple "gen_PE_op" function in sim
     def __init__(self, B_net, t_PE, gyro_ratio=gamma, larmor_freq=1e6):
+        super().__init__()
         axes, angles = algb.get_rotation_to_vector(vectors=B_net,
                                                    target_vectors=[0, 0, 1])
         rot_z = rotation_op(axes, angles)  # rotate B_net_VOI to z-axis
@@ -47,8 +50,8 @@ class phase_encoding_op(ops.operator):
         evol_rot = rotation_op(np.array([0, 0, 1]), evol_angle)
         self.pe_rot = ops.composite_op(ops.transposed_op(rot_z), evol_rot, rot_z)
 
-        self.x_shape = self.pe_rot.x_shape
-        self.y_shape = (len(t_PE), B_net.shape[1])
+        self.x_shape = self.pe_rot.get_x_shape()
+        self.y_shape = self.pe_rot.get_y_shape()
 
     def forward(self, x):
         return self.pe_rot.forward(x)
@@ -59,6 +62,7 @@ class phase_encoding_op(ops.operator):
 
 class detection_op(ops.operator):
     def __init__(self, B_net, t, sensi_mats=None, larmor_freq=1e6, T1_mat=None, T2_mat=None):
+        super().__init__()
         axes, angles = algb.get_rotation_to_vector(vectors=B_net,
                                                    target_vectors=[0, 0, 1])  # each output is Np
         self.rot_z = rotation_op(axes, angles)  # rotate B_net_VOI to z-axis
@@ -92,7 +96,7 @@ class detection_op(ops.operator):
             self.TR_encode = np.dot(C, self.TR_encode)
             # np.repeat(self.TR_encode, sensi_mat.shape[1], axis=0)
             # TR_encode is now Nt * Nc * Np
-            self.Nc = sensi_mats.shape[2]
+            Nc = sensi_mats.shape[2]
 
         else:
             # Nt * Np
@@ -102,18 +106,20 @@ class detection_op(ops.operator):
             # vis.imshow(np.real(TR_encode), name='TR_encode real')
 
             # initialize TR_encode
-            self.Nc = 1
+            Nc = 1
             # Nt * Nc * Np
             self.TR_encode = np.expand_dims(TR_encode, axis=1)
         self.Nt = len(t)
-        self.Np = B_net.shape[1]
+        self.x_shape = self.rot_z.get_x_shape()  # 3, Np
+        self.y_shape = (len(t), Nc)  # Nt * Nc
+        self.y_dtype = complex
 
     def forward(self, x):
         x = np.complex64(self.rot_z.forward(x))
         x = np.matmul(np.array([1, 1j, 0]), x)
         # initialize y
-        y = np.zeros((self.Nt, self.Nc), dtype=complex)
-        for c in range(self.Nc):
+        y = np.zeros(self.y_shape, dtype=complex)
+        for c in range(self.y_shape[1]):
             y[:, c] = np.matmul(self.TR_encode[:, c, :], x)
 
         return y
@@ -124,8 +130,11 @@ class detection_op(ops.operator):
     # Change coordinates to net B point to z-axis for M and C
     def transpose(self, y):
         # initialize x
-        x = np.zeros((self.Np,), dtype=complex)
-        for c in range(self.Nc):
-            x += np.matmul(self.TR_encode[:, c, :].T, y)  # x should be Np
-        x = np.concatenate(np.real(x), np.imag(x), np.zeros(x.shape), axis=0)  # 3*Np
+        x_comp = np.zeros((self.x_shape[1], self.y_shape[1]), dtype=complex)
+        for c in range(self.y_shape[1]):
+            x_comp += self.TR_encode[:, c, :].conj().T @ y
+        # sum over coils
+        x_comp = np.expand_dims(np.sum(x_comp, axis=1), axis=0)
+        x = np.concatenate((np.real(x_comp), np.imag(x_comp), np.zeros(x_comp.shape)), axis=0)
+        # 3*Np
         return self.rot_z.transpose(x)
