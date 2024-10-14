@@ -6,18 +6,15 @@
    Additional Notes: 
 """
 
-import gen_op
 from sim import acquisition as acq
 import mr_io
 import numpy as np
-import matplotlib.pyplot as plt
 import visualization as vis
 import algebra as algb
-from optlib import operators as ops
+from optlib import operators as ops, mr_op as mr_op
 from sim import masks as mk
-from sim import dephasing as dp
-from sim import space as spc
 from sim import gradient as grad
+from tests.tests_optlib import test_operators as test_ops
 
 generate_new_data = True
 
@@ -87,7 +84,7 @@ if generate_new_data:
                                      chest_dim=chest_dim)
 
     # Generate phantom
-    # phantom = mk.gen_sphere(X_axis, Y_axis, Z_axis, loc=loc + [0, 0, 20], rad=60)
+    # # phantom = mk.gen_sphere(X_axis, Y_axis, Z_axis, loc=loc + [0, 0, 20], rad=60)
     phantom = mk.gen_breast_mask(X_axis, Y_axis, Z_axis, R=R - 10, height=height,
                                  breast_loc=breast_loc.copy(),
                                  tkns=coil_tkns,
@@ -105,7 +102,7 @@ if generate_new_data:
     t_PE = 1e-3  # s
     gamma = 42.58e6  # Hz/T
     Gsi_str = 4 / gamma / 2 / R / t_PE  # 4 cycles in the FOV
-    # Gsi_str = 0.0013e-3  # T/mm
+    # Gsi_str = 0.01e-3  # T/mm
     Gsi_raw = grad.generate_linear_gradient_3d_Bz((intrp_x, intrp_y, intrp_z), grad_dir='y',
                                                   orientation='x',
                                                   start_value=Gsi_str * ylim[0], end_value=Gsi_str
@@ -279,11 +276,10 @@ vis.show_all_plots()
 # Excite
 flip_angle_rad = np.deg2rad(flip_angle_deg)
 rot_mat = algb.rot_mat(B1_eff, flip_angle_rad)
-E = ops.hadamard_matrix_op(rot_mat)  # TODO: check this
+X = ops.hadamard_matrix_op(rot_mat)  # TODO: check this
 
 # %% Coil Sensitivity
 sensi_mat = np.diag(B1_eff)
-C = ops.hadamard_op(sensi_mat)  # TODO: what is the coil sensitivity matrix for our receiving coil?
 Sensi_VOI = np.ones(shape=B1_VOI.shape)
 Sensi_VOI = np.expand_dims(Sensi_VOI, axis=2)  # in case we have multiple coils
 
@@ -313,144 +309,11 @@ B_FE_VOI = Glr_VOI * DC_Glr + np.repeat(np.expand_dims(np.array([1, 0, 0]), axis
                                         B0_VOI.shape[1],
                                         axis=1) * 24e-3
 
-
-# B_net_axes, B_net_angles = algb.get_rotation_to_vector(vectors=B_net_VOI, target_vectors=[0, 0, 1])
-
-class rotation_op:
-    def __init__(self, axes, angles):
-        if len(np.array(axes).shape) == 1:
-            axes = np.repeat(np.expand_dims(axes, axis=1), len(angles), axis=1)
-        # Precompute all rotation matrices
-        self.rot_mats = np.array(
-            [algb.rot_mat(np.array(axes)[:, i], np.array(angles)[i]) for i in range(
-                len(np.array(angles)))])
-
-    def forward(self, x):
-        # Assumes x of shape (n, self.len)
-        return np.einsum('ijk,ki->ji', self.rot_mats, x)
-
-    def transpose(self, x):
-        # Assumes x of shape (n, self.len)
-        rot_mats_T = np.transpose(self.rot_mats, (0, 2, 1))
-        return np.einsum('ijk,ki->ji', rot_mats_T, x)
-
-
-class phase_encoding_op:
-    def __init__(self, B_net, t_PE, gyro_ratio=gamma, larmor_freq=1e6):
-        # TODO: define gyro_ratio as a global variable
-        axes, angles = algb.get_rotation_to_vector(vectors=B_net,
-                                                   target_vectors=[0, 0, 1])
-        rot_z = rotation_op(axes, angles)  # rotate B_net_VOI to z-axis
-
-        evol_angle = (gyro_ratio * rot_z.forward(B_net)[2, :] - larmor_freq) * t_PE * np.pi * 2
-        evol_rot = rotation_op(np.array([0, 0, 1]), evol_angle)
-        self.pe_rot = ops.composite_op(ops.transposed_op(rot_z), evol_rot, rot_z)
-
-    def forward(self, x):
-        return self.pe_rot.forward(x)
-
-    def transpose(self, x):
-        return self.pe_rot.transpose(x)
-
-
 # t_PE = 1e-4  # change this to the actual time
-PE = phase_encoding_op(B_PE_VOI, t_PE)
-
+PE = mr_op.phase_encoding_op(B_PE_VOI, t_PE)
 
 # %% Detection
-class detection_op:
-    def __init__(self, B_net, t, sensi_mats=None, larmor_freq=1e6, T1_mat=None, T2_mat=None):
-        axes, angles = algb.get_rotation_to_vector(vectors=B_net,
-                                                   target_vectors=[0, 0, 1])  # each output is Np
-        self.rot_z = rotation_op(axes, angles)  # rotate B_net_VOI to z-axis
-
-        # Np
-        delta_omega = gamma * self.rot_z.forward(B_net)[2, :] - larmor_freq
-
-        if sensi_mats is not None:
-            # initialize coil_eff
-            coil_eff = self.rot_z.forward(sensi_mats)
-
-            # transverse component of the coil sensitivity, Np*Nc
-            for i in range(sensi_mats.shape[2]):
-                coil_eff[:, i] = np.matmul(sensi_mats[:, :, i], np.array([1, 1j, 0]))
-                # 3*Np*Nc ->Np*Nc
-
-            # Nt * Nc * Np
-            TR_encode = np.repeat(np.exp(-1j * np.matmul(np.array(t).T, np.array(delta_omega))),
-                                  coil_eff.shape[1], axis=1)
-
-            # initialize TR_encode
-            self.TR_encode = np.zeros((len(t), sensi_mats.shape[2]), dtype=complex)
-
-            # Nt * Nc * Np
-            for i in sensi_mats.shape[2]:
-                self.TR_encode[:, i] = np.dot(np.repeat(coil_eff[:, i], len(t), axis=1),
-                                              TR_encode)  #
-                # TODO: fix this!!! test with a dummy example
-
-            C = np.repeat(coil_eff, len(t), axis=1)
-            self.TR_encode = np.dot(C, self.TR_encode)
-            # np.repeat(self.TR_encode, sensi_mat.shape[1], axis=0)
-            # TR_encode is now Nt * Nc * Np
-            self.Nc = sensi_mats.shape[2]
-
-        else:
-            # Nt * Np
-            TR_encode = np.exp(-1j * np.matmul(np.expand_dims(np.array(t), axis=1), np.expand_dims(
-                np.array(delta_omega), axis=0)) * 2 * np.pi)
-
-            # vis.imshow(np.real(TR_encode), name='TR_encode real')
-
-            # initialize TR_encode
-            self.Nc = 1
-            # Nt * Nc * Np
-            self.TR_encode = np.expand_dims(TR_encode, axis=1)
-        self.Nt = len(t)
-        self.Np = B_net.shape[1]
-
-    def forward(self, x):
-        x = np.complex64(self.rot_z.forward(x))
-        x = np.matmul(np.array([1, 1j, 0]), x)
-        # initialize y
-        y = np.zeros((self.Nt, self.Nc), dtype=complex)
-        for c in range(self.Nc):
-            y[:, c] = np.matmul(self.TR_encode[:, c, :], x)
-
-        return y
-
-    # for each magnetization point and time point, calculate the signal
-    # return acq.detect_signal(x, self.B, self.C, self.t, T1=self.T1, T2=self.T2)
-
-    # Change coordinates to net B point to z-axis for M and C
-    def transpose(self, y):
-        # initialize x
-        x = np.zeros((self.Np,), dtype=complex)
-        for c in range(self.Nc):
-            x += np.matmul(self.TR_encode[:, c, :].T, y)  # x should be Np
-        x = np.concatenate(np.real(x), np.imag(x), np.zeros(x.shape), axis=0)  # 3*Np
-        return self.rot_z.transpose(x)
-
-
-D = detection_op(B_FE_VOI, t_acq)
-
-# %% Acquisition
-# dM/dt for all voxels (thus considering the field inhomogeneity)
-# class manual_derivative:
-#     """
-#        Takes the end of the
-#     """
-#     def __init__(self):
-#
-#     def forward(self,x):
-#         result = np.zeros_like(x)
-#         t = x.shape[2]
-#         for i in range(t - 1):
-#             result[:, :, i] = x[:, :, i + 1] - x[:, :, i]
-#         return result
-#     def transpose(self,x):
-#         return self.forward(x)
-
+D = mr_op.detection_op(B_FE_VOI, t_acq)
 
 # %% Visualization
 # Magnetization
@@ -461,7 +324,7 @@ vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(M, axis=0), xlim=xlim, ylim
               mask=VOI)
 
 # Excited Magnetization
-M_excited = E.forward(M)
+M_excited = X.forward(M)
 vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(M_excited, axis=0), xlim=xlim, ylim=ylim,
               zlim=zlim,
               title='Excited Magnetization', mask=VOI)
@@ -511,4 +374,10 @@ vis.plot_against_frequency(Signal, frag_len=len(Signal), dt=dt, name='Image')
 
 
 # %% Reconstruction
-A = ops.composite_op(P, E, PE, C, D)
+test_ops.test_adjoint_property(op_instance=P)
+test_ops.test_adjoint_property(op_instance=X)
+test_ops.test_adjoint_property(op_instance=PE)
+test_ops.test_adjoint_property(op_instance=D)
+A = ops.composite_op(P, X, PE, D)
+# test for any random x, yAx = xA^Ty
+test_ops.test_adjoint_property(op_instance=A)
