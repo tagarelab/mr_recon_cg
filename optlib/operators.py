@@ -25,13 +25,14 @@ class operator(ABC):
     """
     Abstract class for operators
     """
+    x_dtype = np.float64
+    y_dtype = np.float64
+    x_shape = None  # default shape of input for forward operator
+    y_shape = None  # default shape of input for transpose operator
 
     @abstractmethod
     def __init__(self):
-        self.x_shape = None
-        self.y_shape = None
-        self.x_dtype = np.float64
-        self.y_dtype = np.float64
+        pass
 
     @abstractmethod
     def forward(self, x):
@@ -156,11 +157,14 @@ class hadamard_op(operator):
     """
     def __init__(self,A):
         self.A=A
+        self.x_shape = A.shape
+        self.y_shape = A.shape
+
     def forward(self,x):
         return self.A*x
-    def transpose(self,x):
-        # return self.forward(x)  #TODO: check with Hemant about this: is this conjugate transpose?
-        return np.conj(self.A) * x
+
+    def transpose(self, y):
+        return self.A.conj() * y
 
 
 class hadamard_op_expand(operator):
