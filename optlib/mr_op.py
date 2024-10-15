@@ -18,7 +18,6 @@ gamma = 42.58e6  # Gyromagnetic ratio in Hz/T
 
 class rotation_op(ops.operator):
     def __init__(self, axes, angles):
-        super().__init__()
         if len(np.array(axes).shape) == 1:
             axes = np.repeat(np.expand_dims(axes, axis=1), len(angles), axis=1)
         # Precompute all rotation matrices
@@ -41,7 +40,6 @@ class rotation_op(ops.operator):
 class phase_encoding_op(ops.operator):
     # TODO: replace this with a simple "gen_PE_op" function in sim
     def __init__(self, B_net, t_PE, gyro_ratio=gamma, larmor_freq=1e6):
-        super().__init__()
         axes, angles = algb.get_rotation_to_vector(vectors=B_net,
                                                    target_vectors=[0, 0, 1])
         rot_z = rotation_op(axes, angles)  # rotate B_net_VOI to z-axis
@@ -62,7 +60,6 @@ class phase_encoding_op(ops.operator):
 
 class detection_op(ops.operator):
     def __init__(self, B_net, t, sensi_mats=None, larmor_freq=1e6, T1_mat=None, T2_mat=None):
-        super().__init__()
         axes, angles = algb.get_rotation_to_vector(vectors=B_net,
                                                    target_vectors=[0, 0, 1])  # each output is Np
         self.rot_z = rotation_op(axes, angles)  # rotate B_net_VOI to z-axis
