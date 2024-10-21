@@ -27,8 +27,8 @@ class operator(ABC):
     """
     x_dtype = np.float64
     y_dtype = np.float64
-    x_shape = None  # default shape of input for forward operator
-    y_shape = None  # default shape of input for transpose operator
+    x_shape = None  # default shape of input for forward operator, None means any shape
+    y_shape = None  # default shape of input for transpose operator, None means any shape
 
     @abstractmethod
     def __init__(self):
@@ -59,6 +59,9 @@ class zero_op(operator):
     """
         Returns 0
     """
+
+    def __init__(self):
+        pass
     def forward(self,x):
         return 0.0
     def transpose(self,x):
@@ -212,10 +215,11 @@ class composite_op(operator):
 
         # check if the operators are compatible
         for i in range(len(ops) - 1):
-            if ops[i].get_x_shape() != ops[i + 1].get_y_shape():
+            if ops[i].get_x_shape() != ops[i + 1].get_y_shape() and ops[i].get_x_shape() is not None and ops[
+                i + 1].get_y_shape() is not None:
                 raise ValueError('Operators are not compatible')
 
-        if order is not 'reversed':
+        if order != 'reversed':
             raise ValueError('Not yet implemented. The only order is reversed: (A,B,C) returns ABC where C executes '
                              'first.')
         
