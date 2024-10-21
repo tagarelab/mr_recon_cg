@@ -191,7 +191,7 @@ def radon_fft(img, theta):
     return phantom_fft
 
 
-class ifft_op:
+class ifft_op(op.operator):
     """ Inverse fft operator. Takes a complex
         argument as input and produces a real
         output.
@@ -219,7 +219,7 @@ class ifft_op:
         # return np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(x)))
 
 
-class selection_op:
+class selection_op(op.operator):
     """ Selection operator. Given a vector as an input it
         produces as an output certain components of the vector.
         See the __init__ and forward methods for details
@@ -233,6 +233,7 @@ class selection_op:
             For now x is assumed to be 1-dimensional
         """
         self.x_shape = x_shape
+        self.y_shape = (len(idx),)
         self.idx = idx
 
     def forward(self, x):
