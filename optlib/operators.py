@@ -202,12 +202,22 @@ class composite_op(operator):
        followed by B followed by A
        composite_op accepts any number of operators as arguments
     """
-    def __init__(self,*ops):
+
+    def __init__(self, *ops, order='reversed'):
         self.ops=ops
         self.x_shape = ops[-1].get_x_shape()  # note here the order is reversed
         self.y_shape = ops[0].get_y_shape()
         self.x_dtype = ops[-1].get_x_dtype()
         self.y_dtype = ops[0].get_y_dtype()
+
+        # check if the operators are compatible
+        for i in range(len(ops) - 1):
+            if ops[i].get_x_shape() != ops[i + 1].get_y_shape():
+                raise ValueError('Operators are not compatible')
+
+        if order is not 'reversed':
+            raise ValueError('Not yet implemented. The only order is reversed: (A,B,C) returns ABC where C executes '
+                             'first.')
         
     def forward(self,x):
         for op in reversed(self.ops):
