@@ -11,11 +11,18 @@ import mr_io as mr_io
 
 N_echo = 97
 
-loc = "C:\\Yale\\MRRC\\mr_recon_cg\\data\\241017_YongHyun_6min_scan\\EDITER\\"
+# loc = "C:\\Yale\\MRRC\\mr_recon_cg\\data\\241017_YongHyun_6min_scan\\EDITER\\"
+# file_name = "test_256avg"
+# compare = ['raw_sig', 'editer_corr']
 
-data_mat = mr_io.load_single_mat(name="test_256avg", path=loc)
-for name in ['raw_sig', 'editer_corr']:
-    data = data_mat[name]
+loc = "sim_output/"
+# file_name = "test_256avg_comb_10212024.mat"
+file_name = "test_256avg_editer_comb_10212024.mat"
+compare = ["raw_sig_all", "comb_sig_all"]
+
+data_mat = mr_io.load_single_mat(name=file_name, path=loc)
+for name in compare:
+    data = data_mat[name][:]
 
     data_reshape = data.reshape(N_echo, 100)
 
