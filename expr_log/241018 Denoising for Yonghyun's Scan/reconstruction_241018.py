@@ -3,6 +3,7 @@
 Created on Mon Feb  7 14:06:58 2022
 
 @author: Ha
+Edited by Heng Sun
 """
 
 import numpy as np
@@ -17,8 +18,10 @@ N_echo = 97
 
 loc = "sim_output/"
 # file_name = "test_256avg_comb_10212024.mat"
-file_name = "test_256avg_editer_comb_10212024.mat"
-compare = ["raw_sig_all", "comb_sig_all"]
+# file_name = "test_256avg_editer_comb_10212024.mat"
+# compare = ["raw_sig_all", "comb_sig_all"]
+file_name = "all_combos_comb_editer_10212024.mat"
+compare = ["raw", "editer", "comb", "editer_comb", "comb_editer"]
 
 data_mat = mr_io.load_single_mat(name=file_name, path=loc)
 for name in compare:
