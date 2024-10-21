@@ -37,34 +37,90 @@ def apply_mask(data, mask):
     return masked_data
 
 
-def mask2matrix(data, mask, x, y, z, dtype=complex):
+# def mask2matrix(data, mask, matrix_shape, dtype=None):
+#     """
+#     Convert masked data to a 3D matrix.
+#     :param data: masked data, 2D array
+#     :param mask: mask, 3D boolean array
+#     :param x: x-axis
+#     :param y: y-axis
+#     :param z: z-axis
+#     :return: data in 3D matrix
+#     """
+#     if dtype is None:
+#         dtype = data.dtype
+#
+#     unit_dim = 1
+#     if len(data.shape) == 1:
+#         data = np.expand_dims(data, axis=0)
+#     elif len(data.shape) == 2:
+#         unit_dim = data.shape[0]
+#
+#     data_matrix = np.zeros((unit_dim, matrix_shape[0],matrix_shape[1], matrix_shape[2]), dtype=dtype)
+#     for d in range(unit_dim):
+#         counter = 0
+#         for i in range(matrix_shape[0]):
+#             for j in range(matrix_shape[1]):
+#                 for k in range(matrix_shape[2]):
+#                     if mask[i, j, k]:
+#                         data_matrix[d, i, j, k] = data[d, counter]
+#                         counter += 1
+#
+#     if unit_dim == 1:
+#         data_matrix = np.squeeze(data_matrix, axis=0)
+#
+#     return data_matrix
+
+
+import numpy as np
+
+
+def mask2matrix(data, mask, matrix_shape, dtype=None):
     """
-    Convert masked data to a 3D matrix.
+    Convert masked data to an nD matrix.
     :param data: masked data, 2D array
-    :param mask: mask, 3D boolean array
-    :param x: x-axis
-    :param y: y-axis
-    :param z: z-axis
-    :return: data in 3D matrix
+    :param mask: mask, nD boolean array
+    :param matrix_shape: shape of the nD matrix
+    :param dtype: desired data type of the matrix, optional
+    :return: data in an nD matrix
     """
+    if dtype is None:
+        dtype = data.dtype
+
     unit_dim = 1
     if len(data.shape) == 1:
         data = np.expand_dims(data, axis=0)
     elif len(data.shape) == 2:
         unit_dim = data.shape[0]
 
-    data_matrix = np.zeros((unit_dim, len(x), len(y), len(z)), dtype=dtype)
+    mask_flattened_size = np.sum(mask)
+    data_flattened_size = data.shape[1]
+
+    if mask_flattened_size != data_flattened_size:
+        raise ValueError(
+            f"Mismatch between flattened mask size ({mask_flattened_size}) and data size ({data_flattened_size})")
+
+    # Initialize a matrix filled with zeros of the target shape and specified dtype
+    data_matrix = np.zeros((unit_dim, *matrix_shape), dtype=dtype)
+
+    def fill_matrix(data, data_matrix, mask, indices, unit, data_counter):
+        if len(indices) == len(matrix_shape):
+            if mask[tuple(indices)]:
+                if data_counter[0] >= data.shape[1]:
+                    raise IndexError(f"Attempt to access data[unit, {data_counter[0]}] which is out of bounds")
+                data_matrix[tuple([unit] + indices)] = data[unit, data_counter[0]]
+                data_counter[0] += 1
+            return
+
+        for i in range(matrix_shape[len(indices)]):
+            fill_matrix(data, data_matrix, mask, indices + [i], unit, data_counter)
+
     for d in range(unit_dim):
-        counter = 0
-        for i in range(len(x)):
-            for j in range(len(y)):
-                for k in range(len(z)):
-                    if mask[i, j, k]:
-                        data_matrix[d, i, j, k] = data[d, counter]
-                        counter += 1
+        data_counter = [0]  # Using a list to keep it mutable and persistent across recursive calls
+        fill_matrix(data, data_matrix, mask, [], d, data_counter)
 
     if unit_dim == 1:
-        data_matrix = np.squeeze(data_matrix, axis=3)
+        data_matrix = np.squeeze(data_matrix, axis=0)
 
     return data_matrix
 
