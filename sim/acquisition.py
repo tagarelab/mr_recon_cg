@@ -12,6 +12,42 @@ import algebra as algb
 __all__ = ['slice_select', 'B1_effective']
 
 
+def concatenated_to_complex(data, axis=0, mode="real&imag"):
+    """
+    Convert concatenated real and imaginary data to complex data.
+    :param data:
+    :param axis:
+    :param mode:
+    :return:
+    """
+    data = np.moveaxis(data, axis, -1)
+    if mode == "real&imag":
+        return data @ np.array([1, 1j])
+
+    elif mode == "mag&phase":
+        return data[..., 0] * np.exp(1j * data[..., 1])
+
+    else:
+        raise ValueError("Invalid mode. Choose from 'real&imag' or 'mag&phase'.")
+
+
+def complex_to_concatenated(data, mode="real&imag"):
+    """
+    Convert complex data to concatenated real and imaginary data.
+    :param data:
+    :param mode:
+    :return:
+    """
+    if mode == "real&imag":
+        return np.array([data.real, data.imag])
+
+    elif mode == "mag&phase":
+        return np.array([np.abs(data), np.angle(data)])
+
+    else:
+        raise ValueError("Invalid mode. Choose from 'real&imag' or 'mag&phase'.")
+
+
 def detect_signal(M, B, c, t, T1=None, T2=None):
     """
     Detect the signal at time t
@@ -33,7 +69,6 @@ def detect_signal(M, B, c, t, T1=None, T2=None):
 
     M_u = algb.parallel_component(M, u)
     M_v = algb.parallel_component(M, v)
-
 
     # Get the eta and phi values
     eta = get_eta(u, v, c)
