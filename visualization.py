@@ -248,8 +248,8 @@ def quiver3d(vector, orig=None, label=None, xlim=None, ylim=None, zlim=None, tit
     return fig
 
 
-def scatter3d(B0_LR, B0_SI, B0_AP, grad, xlim=None, ylim=None, zlim=None, clim=None, mask=None, title=None,
-              xlabel="LR (mm)", ylabel="SI (mm)", zlabel="AP (mm)"):
+def scatter3d(data, x_axis=None, y_axis=None, z_axis=None, xlim=None, ylim=None, zlim=None, clim=None, mask=None,
+              title=None, xlabel="LR (mm)", ylabel="SI (mm)", zlabel="AP (mm)"):
     """
     3D scatter plot
     This function is adapted from a MATLAB function by Github Copilot and edited & tested by the author.
@@ -264,26 +264,75 @@ def scatter3d(B0_LR, B0_SI, B0_AP, grad, xlim=None, ylim=None, zlim=None, clim=N
     Returns:
     - None
     """
+    if mask is None:
+        if x_axis is None:
+            x_axis = np.arange(data.shape[0])
+        if y_axis is None:
+            y_axis = np.arange(data.shape[1])
+        if z_axis is None:
+            z_axis = np.arange(data.shape[2])
 
     fig = plt.figure()
 
     ax = fig.add_subplot(111, projection='3d')
-    X_M, Y_M, Z_M = np.meshgrid(B0_LR, B0_SI, B0_AP, indexing='ij')
+    X_M, Y_M, Z_M = np.meshgrid(x_axis, y_axis, z_axis, indexing='ij')
 
     if mask is not None:
         X_M = X_M[mask]
         Y_M = Y_M[mask]
         Z_M = Z_M[mask]
-        if grad.ndim == 3:
-            grad = grad[mask]
+        if data.ndim == 3:
+            data = data[mask]
 
-    scatter = ax.scatter(X_M, Y_M, Z_M, c=grad, s=1)
-
+    scatter = ax.scatter(X_M, Y_M, Z_M, c=data, s=1)
     plt.colorbar(scatter)
     ax.axis('equal')
     set_limit_title(ax=ax, xlim=xlim, ylim=ylim, zlim=zlim, clim=clim, title=title, xlabel=xlabel, ylabel=ylabel,
                     zlabel=zlabel, image=scatter)
+    plt.show()
 
+
+def scatter2d(data, x_axis=None, y_axis=None, xlim=None, ylim=None, clim=None, mask=None,
+              title=None, xlabel="X", ylabel="Y"):
+    """
+    2D scatter plot
+    This function is adapted from the scatter3d function by Clarity and edited & tested by the author.
+
+    Parameters:
+    - data (numpy.ndarray): The data to be visualized.
+    - x_axis (numpy.ndarray, optional): Values for the x-axis.
+    - y_axis (numpy.ndarray, optional): Values for the y-axis.
+    - xlim (tuple, optional): Limits for the x-axis.
+    - ylim (tuple, optional): Limits for the y-axis.
+    - clim (tuple, optional): Limits for the color scale.
+    - mask (numpy.ndarray, optional): A boolean mask to apply to the data.
+    - title (str, optional): The title of the plot.
+    - xlabel (str, optional): The label for the x-axis.
+    - ylabel (str, optional): The label for the y-axis.
+
+    Returns:
+    - None
+    """
+    if mask is None:
+        if x_axis is None:
+            x_axis = np.arange(data.shape[0])
+        if y_axis is None:
+            y_axis = np.arange(data.shape[1])
+
+    fig, ax = plt.subplots()
+
+    X_M, Y_M = np.meshgrid(x_axis, y_axis, indexing='ij')
+
+    if mask is not None:
+        X_M = X_M[mask]
+        Y_M = Y_M[mask]
+        if data.ndim == 2:
+            data = data[mask]
+
+    scatter = ax.scatter(X_M, Y_M, c=data, s=1)
+    plt.colorbar(scatter)
+    ax.axis('equal')
+    set_limit_title(ax=ax, xlim=xlim, ylim=ylim, clim=clim, title=title, xlabel=xlabel, ylabel=ylabel, image=scatter)
     plt.show()
 
 
