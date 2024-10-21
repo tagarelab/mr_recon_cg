@@ -374,7 +374,7 @@ def vec2mesh(mag, x_coord, y_coord, z_coord, x_dim=None, y_dim=None, z_dim=None,
         mag = np.expand_dims(mag, axis=0)
     if mag.shape[1] != x_dim * y_dim * z_dim:
         if empty_val is None:
-            raise ValueError('Error: target dimensions does not meet vector dimension.')
+            raise ValueError('Error: target dimensions does not meet vector dimension. Empty_val is not specified.')
         else:
             warnings.warn("Warning: target dimensions does not meet vector dimension. Filling with empty_val: %.2f"
                           % empty_val)
