@@ -95,7 +95,7 @@ for i in range(3):
 nubo_b0_raw = B0_intrp
 # nubo_b0_raw, b0_X, b0_Y, b0_Z = mr_io.read_nubo_b0(path=path, intrp_x=intrp_x, intrp_y=intrp_y, intrp_z=intrp_z)
 nubo_b0_amp = np.linalg.norm(nubo_b0_raw, axis=3)
-vis.scatter3d(b0_X, b0_Y, b0_Z, nubo_b0_amp, xlim=xlim, ylim=ylim, zlim=zlim, title='B0 (T)')
+vis.scatter3d(nubo_b0_amp, b0_X, b0_Y, b0_Z, xlim=xlim, ylim=ylim, zlim=zlim, title='B0 (T)')
 
 # %% slice selection
 # Constants
@@ -118,8 +118,8 @@ SI_cut = (Y_M > -3) & (Y_M < 3)
 LR_cut = (X_M > -3) & (X_M < 3)
 
 # Visualize
-vis.scatter3d(b0_X, b0_Y, b0_Z, nubo_b0_amp, xlim=xlim, ylim=ylim, zlim=zlim, mask=slice, title='B0 (T)')
-vis.scatter3d(b0_X, b0_Y, b0_Z, nubo_b0_amp, xlim=xlim, ylim=ylim, zlim=zlim, mask=SI_cut, title='B0 (T)')
+vis.scatter3d(nubo_b0_amp, b0_X, b0_Y, b0_Z, xlim=xlim, ylim=ylim, zlim=zlim, mask=slice, title='B0 (T)')
+vis.scatter3d(nubo_b0_amp, b0_X, b0_Y, b0_Z, xlim=xlim, ylim=ylim, zlim=zlim, mask=SI_cut, title='B0 (T)')
 
 # %% read B1
 path = 'sim_inputs/'

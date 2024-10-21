@@ -89,7 +89,7 @@ for i in range(3):
 nubo_b0_raw = B0_intrp
 # nubo_b0_raw, b0_X, b0_Y, b0_Z = mr_io.read_nubo_b0(path=path, intrp_x=intrp_x, intrp_y=intrp_y, intrp_z=intrp_z)
 nubo_b0_amp = np.linalg.norm(nubo_b0_raw, axis=0)
-vis.scatter3d(b0_X, b0_Y, b0_Z, nubo_b0_amp)
+vis.scatter3d(nubo_b0_amp, b0_X, b0_Y, b0_Z)
 
 # %% slice selection
 # Constants
@@ -106,7 +106,7 @@ nubo_b0 = nubo_b0_raw * DC  # slice strength
 # Call slice_select function
 id = acq.slice_select(nubo_b0, ctr_mag, slc_tkns_mag)
 
-vis.scatter3d(b0_X, b0_Y, b0_Z, nubo_b0_amp, mask=id)
+vis.scatter3d(nubo_b0_amp, b0_X, b0_Y, b0_Z, mask=id)
 
 # %% read B1
 path = 'sim_inputs/'
@@ -131,8 +131,8 @@ for i in range(3):
 
 # %% plot B1
 B1_intrp_amp = np.linalg.norm(B1_intrp, axis=0)
-vis.scatter3d(b0_X, b0_Y, b0_Z, B1_intrp_amp)
-vis.scatter3d(b0_X, b0_Y, b0_Z, B1_intrp_amp, mask=id)
+vis.scatter3d(B1_intrp_amp, b0_X, b0_Y, b0_Z)
+vis.scatter3d(B1_intrp_amp, b0_X, b0_Y, b0_Z, mask=id)
 
 # %% effective B1
 B1_eff = np.zeros((3, intrp_x, intrp_y, intrp_z))
@@ -141,8 +141,8 @@ for i in range(intrp_x):
         for k in range(intrp_z):
             B1_eff[:, i, j, k] = acq.B1_effective(B1_intrp[:, i, j, k], B0_intrp[:, i, j, k])
 B1_eff_amp = np.linalg.norm(B1_eff, axis=0)
-vis.scatter3d(b0_X, b0_Y, b0_Z, B1_eff_amp)
-vis.scatter3d(b0_X, b0_Y, b0_Z, B1_eff_amp, mask=id)
+vis.scatter3d(B1_eff_amp, b0_X, b0_Y, b0_Z)
+vis.scatter3d(B1_eff_amp, b0_X, b0_Y, b0_Z, mask=id)
 ratio = B1_eff_amp / B1_intrp_amp
-vis.scatter3d(b0_X, b0_Y, b0_Z, ratio)
-vis.scatter3d(b0_X, b0_Y, b0_Z, ratio, mask=id)
+vis.scatter3d(ratio, b0_X, b0_Y, b0_Z)
+vis.scatter3d(ratio, b0_X, b0_Y, b0_Z, mask=id)

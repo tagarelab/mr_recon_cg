@@ -269,8 +269,7 @@ B1_eff = acq.B1_effective(B1_VOI, B0_VOI)
 B1_eff_amp = np.linalg.norm(B1_eff, axis=0)
 flip_angle_deg = B1_eff_amp / np.mean(B1_eff_amp) * 90
 
-vis.scatter3d(X_axis, Y_axis, Z_axis, flip_angle_deg, xlim=xlim, ylim=ylim, zlim=zlim,
-              title='Flip Angle', mask=VOI)
+vis.scatter3d(flip_angle_deg, X_axis, Y_axis, Z_axis, xlim=xlim, ylim=ylim, zlim=zlim, mask=VOI, title='Flip Angle')
 vis.show_all_plots()
 
 # Excite
@@ -319,46 +318,42 @@ D = mr_op.detection_op(B_FE_VOI, t_acq)
 # Magnetization
 M = P.forward(O)
 
-vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(M, axis=0), xlim=xlim, ylim=ylim, zlim=zlim,
-              title='Magnetization',
-              mask=VOI)
+vis.scatter3d(np.linalg.norm(M, axis=0), X_axis, Y_axis, Z_axis, xlim=xlim, ylim=ylim, zlim=zlim, mask=VOI,
+              title='Magnetization')
 
 # Excited Magnetization
 M_excited = X.forward(M)
-vis.scatter3d(X_axis, Y_axis, Z_axis, np.linalg.norm(M_excited, axis=0), xlim=xlim, ylim=ylim,
-              zlim=zlim,
-              title='Excited Magnetization', mask=VOI)
-vis.scatter3d(X_axis, Y_axis, Z_axis, M_excited[0, :], xlim=xlim, ylim=ylim,
-              zlim=zlim,
-              title='Excited Mx', mask=VOI)
+vis.scatter3d(np.linalg.norm(M_excited, axis=0), X_axis, Y_axis, Z_axis, xlim=xlim, ylim=ylim, zlim=zlim, mask=VOI,
+              title='Excited Magnetization')
+vis.scatter3d(M_excited[0, :], X_axis, Y_axis, Z_axis, xlim=xlim, ylim=ylim, zlim=zlim, mask=VOI, title='Excited Mx')
 #
 # # %% Phase Encoding
 M_PE = PE.forward(M_excited)
 
-# sanity check
+# # sanity check
 # M_dummy = np.repeat(np.expand_dims(np.array([0, 0, 1]), axis=1), O.shape[0], axis=1)
 # M_PE = PE.forward(M_dummy)
-
-# vis.scatter3d(X_axis, Y_axis, Z_axis, M_dummy[0, :], xlim=xlim,
+#
+# vis.scatter3d(M_dummy[0, :], X_axis, Y_axis, Z_axis, xlim=xlim,
 #               ylim=ylim, zlim=zlim, title='Dummy M_LR', mask=VOI)
-# vis.scatter3d(X_axis, Y_axis, Z_axis, M_dummy[1, :], xlim=xlim,
+# vis.scatter3d(M_dummy[1, :], X_axis, Y_axis, Z_axis, xlim=xlim,
 #               ylim=ylim, zlim=zlim, title='Dummy M_SI', mask=VOI)
-# vis.scatter3d(X_axis, Y_axis, Z_axis, M_dummy[2, :], xlim=xlim,
+# vis.scatter3d(M_dummy[2, :], X_axis, Y_axis, Z_axis, xlim=xlim,
 #               ylim=ylim, zlim=zlim, title='Dummy M_AP', mask=VOI)
-vis.scatter3d(X_axis, Y_axis, Z_axis, M_PE[0, :], xlim=xlim,
-              ylim=ylim, zlim=zlim, title='Phase Encoded M_LR', mask=VOI)
-# vis.scatter3d(X_axis, Y_axis, Z_axis, M_PE[1, :], xlim=xlim,
+vis.scatter3d(M_PE[0, :], X_axis, Y_axis, Z_axis, xlim=xlim, ylim=ylim, zlim=zlim, mask=VOI, title='Phase Encoded M_LR')
+# vis.scatter3d(M_PE[1, :], X_axis, Y_axis, Z_axis, xlim=xlim,
 #               ylim=ylim, zlim=zlim, title='Phase Encoded M_SI', mask=VOI)
-# vis.scatter3d(X_axis, Y_axis, Z_axis, M_PE[2, :], xlim=xlim,
+# vis.scatter3d(M_PE[2, :], X_axis, Y_axis, Z_axis, xlim=xlim,
 #               ylim=ylim, zlim=zlim, title='Phase Encoded M_AP', mask=VOI)
 
 # %% Detection
 # M_dummy = np.repeat(np.expand_dims(np.array([0, 0, 1]), axis=1), O.shape[0], axis=1)
 # Signal = D.forward(M_dummy)
-Signal = D.forward(M_PE)
+concat_sig = D.forward(M_PE)
+signal = acq.concatenated_to_complex(concat_sig, axis=0, mode="real&imag")
 
-vis.complex(Signal, name='Signal')
-vis.plot_against_frequency(Signal, frag_len=len(Signal), dt=dt, name='Image')
+vis.complex(signal, name='Signal')
+vis.plot_against_frequency(signal, frag_len=len(signal), dt=dt, name='Image')
 
 # # Dephased Magnetization over time
 # M_0 = np.linalg.norm(M_0[:, :, 0], axis=0)  # TODO: is this the correct M0?
@@ -372,12 +367,20 @@ vis.plot_against_frequency(Signal, frag_len=len(Signal), dt=dt, name='Image')
 #               title='Dephased Magnetization at the end of acq window', mask=VOI)
 # Measured Signal
 
+# %% Combined Operator
+A = ops.composite_op(D, PE, X, P)
+
+# %% Adjoint Tests
+# if test_ops.test_adjoint_property(op_instance=P):
+#     print('P passed the adjoint test')
+# if test_ops.test_adjoint_property(op_instance=X):
+#     print('X passed the adjoint test')
+# if test_ops.test_adjoint_property(op_instance=PE):
+#     print('PE passed the adjoint test')
+# if test_ops.test_adjoint_property(op_instance=D):
+#     print('D passed the adjoint test')
+# if test_ops.test_adjoint_property(op_instance=A):
+#     print('A passed the adjoint test')
+
 
 # %% Reconstruction
-test_ops.test_adjoint_property(op_instance=P)
-test_ops.test_adjoint_property(op_instance=X)
-test_ops.test_adjoint_property(op_instance=PE)
-test_ops.test_adjoint_property(op_instance=D)
-A = ops.composite_op(P, X, PE, D)
-# test for any random x, yAx = xA^Ty
-test_ops.test_adjoint_property(op_instance=A)

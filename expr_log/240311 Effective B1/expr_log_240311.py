@@ -95,7 +95,7 @@ for i in range(3):
 nubo_b0_raw = B0_intrp
 # nubo_b0_raw, b0_X, b0_Y, b0_Z = mr_io.read_nubo_b0(path=path, intrp_x=intrp_x, intrp_y=intrp_y, intrp_z=intrp_z)
 nubo_b0_amp = np.linalg.norm(nubo_b0_raw, axis=0)
-vis.scatter3d(b0_X, b0_Y, b0_Z, nubo_b0_amp, xlim=xlim, ylim=ylim, zlim=zlim, title='B0 (T)')
+vis.scatter3d(nubo_b0_amp, b0_X, b0_Y, b0_Z, xlim=xlim, ylim=ylim, zlim=zlim, title='B0 (T)')
 
 # %% slice selection
 # Constants
@@ -118,8 +118,8 @@ SI_cut = (Y_M > -3) & (Y_M < 3)
 LR_cut = (X_M > -3) & (X_M < 3)
 
 # Visualize
-vis.scatter3d(b0_X, b0_Y, b0_Z, nubo_b0_amp, xlim=xlim, ylim=ylim, zlim=zlim, mask=slice, title='B0 (T)')
-vis.scatter3d(b0_X, b0_Y, b0_Z, nubo_b0_amp, xlim=xlim, ylim=ylim, zlim=zlim, mask=SI_cut, title='B0 (T)')
+vis.scatter3d(nubo_b0_amp, b0_X, b0_Y, b0_Z, xlim=xlim, ylim=ylim, zlim=zlim, mask=slice, title='B0 (T)')
+vis.scatter3d(nubo_b0_amp, b0_X, b0_Y, b0_Z, xlim=xlim, ylim=ylim, zlim=zlim, mask=SI_cut, title='B0 (T)')
 
 # %% read B1
 path = 'sim_inputs/'
@@ -148,9 +148,9 @@ B1_intrp_amp = np.linalg.norm(B1_intrp, axis=0)
 B1_mask = (B1_intrp_amp > 0.002)
 # B1_mask = mk.gen_breast_mask(b0_X, b0_Y, b0_Z, R=0.06, height=0.100)
 
-vis.scatter3d(b0_X, b0_Y, b0_Z, B1_intrp_amp, xlim=xlim, ylim=ylim, zlim=zlim, title='B1 (T)')
-vis.scatter3d(b0_X, b0_Y, b0_Z, B1_intrp_amp, xlim=xlim, ylim=ylim, zlim=zlim, mask=slice & B1_mask, title='B1 (T)')
-vis.scatter3d(b0_X, b0_Y, b0_Z, B1_intrp_amp, xlim=xlim, ylim=ylim, zlim=zlim, mask=SI_cut, title='B1 (T)')
+vis.scatter3d(B1_intrp_amp, b0_X, b0_Y, b0_Z, xlim=xlim, ylim=ylim, zlim=zlim, title='B1 (T)')
+vis.scatter3d(B1_intrp_amp, b0_X, b0_Y, b0_Z, xlim=xlim, ylim=ylim, zlim=zlim, mask=slice & B1_mask, title='B1 (T)')
+vis.scatter3d(B1_intrp_amp, b0_X, b0_Y, b0_Z, xlim=xlim, ylim=ylim, zlim=zlim, mask=SI_cut, title='B1 (T)')
 
 # %% effective B1
 B1_eff = np.zeros((3, intrp_x, intrp_y, intrp_z))
@@ -168,19 +168,17 @@ ratio_perc = B1_eff_amp / B1_intrp_amp * 100
 #               title='Effective B1 / B1 (%)')
 # vis.scatter3d(b0_X, b0_Y, b0_Z, ratio_perc, xlim=xlim, ylim=ylim, zlim=zlim, mask=B1_mask,
 #               title='Effective B1 / B1 (%)')
-vis.scatter3d(b0_X, b0_Y, b0_Z, ratio_perc, xlim=xlim, ylim=ylim, zlim=zlim, mask=SI_cut,
-              title='Effective B1 / B1 (%)')
-vis.scatter3d(b0_X, b0_Y, b0_Z, ratio_perc, xlim=xlim, ylim=ylim, zlim=zlim, mask=LR_cut,
-              title='Effective B1 / B1 (%)')
+vis.scatter3d(ratio_perc, b0_X, b0_Y, b0_Z, xlim=xlim, ylim=ylim, zlim=zlim, mask=SI_cut, title='Effective B1 / B1 (%)')
+vis.scatter3d(ratio_perc, b0_X, b0_Y, b0_Z, xlim=xlim, ylim=ylim, zlim=zlim, mask=LR_cut, title='Effective B1 / B1 (%)')
 
 # %% flip angle
 clim = [40, 130]
 flip_angle_deg = B1_eff_amp / np.mean(B1_eff_amp[slice & B1_mask]) * 90
-vis.scatter3d(b0_X, b0_Y, b0_Z, flip_angle_deg, xlim=xlim, ylim=ylim, zlim=zlim, clim=clim, mask=slice & B1_mask,
+vis.scatter3d(flip_angle_deg, b0_X, b0_Y, b0_Z, xlim=xlim, ylim=ylim, zlim=zlim, clim=clim, mask=slice & B1_mask,
               title='Flip Angle (degree)')
-vis.scatter3d(b0_X, b0_Y, b0_Z, flip_angle_deg, xlim=xlim, ylim=ylim, zlim=zlim, clim=clim, mask=SI_cut,
+vis.scatter3d(flip_angle_deg, b0_X, b0_Y, b0_Z, xlim=xlim, ylim=ylim, zlim=zlim, clim=clim, mask=SI_cut,
               title='Flip Angle (degree)')
-vis.scatter3d(b0_X, b0_Y, b0_Z, flip_angle_deg, xlim=xlim, ylim=ylim, zlim=zlim, clim=clim, mask=LR_cut,
+vis.scatter3d(flip_angle_deg, b0_X, b0_Y, b0_Z, xlim=xlim, ylim=ylim, zlim=zlim, clim=clim, mask=LR_cut,
               title='Flip Angle (degree)')
-vis.scatter3d(b0_X, b0_Y, b0_Z, flip_angle_deg, xlim=xlim, ylim=ylim, zlim=zlim, clim=clim, mask=B1_mask,
+vis.scatter3d(flip_angle_deg, b0_X, b0_Y, b0_Z, xlim=xlim, ylim=ylim, zlim=zlim, clim=clim, mask=B1_mask,
               title='Flip Angle (degree)')
