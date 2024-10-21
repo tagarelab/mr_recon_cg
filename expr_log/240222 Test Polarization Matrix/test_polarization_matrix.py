@@ -16,7 +16,7 @@ import visualization as vis
 path = 'sim_inputs/magnetData.csv'
 nubo_b0_raw, b0_X, b0_Y, b0_Z = mr_io.read_nubo_b0(path=path, intrp_x=30, intrp_y=30, intrp_z=30)
 
-vis.scatter3d(b0_X, b0_Y, b0_Z, nubo_b0_raw)
+vis.scatter3d(nubo_b0_raw, b0_X, b0_Y, b0_Z)
 
 # %% slice selection
 # Constants
@@ -33,4 +33,4 @@ nubo_b0 = nubo_b0_raw * DC  # slice strength
 # Call slice_select function
 id = acq.slice_select(nubo_b0, ctr_mag, slc_tkns_mag)
 
-vis.scatter3d(b0_X, b0_Y, b0_Z, nubo_b0_raw, mask=id)
+vis.scatter3d(nubo_b0_raw, b0_X, b0_Y, b0_Z, mask=id)
