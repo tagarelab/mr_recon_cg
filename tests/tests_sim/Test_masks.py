@@ -31,7 +31,7 @@ class TestMasks(unittest.TestCase):
         # Check if the output dimensions are correct
         assert phantom_3d.shape == (100, 100, 100)
 
-        vis.scatter3d(X_axis, Y_axis, Z_axis, phantom_3d, title='Sphere Phantom', mask=phantom_3d > 0)
+        vis.scatter3d(phantom_3d, X_axis, Y_axis, Z_axis, mask=phantom_3d > 0, title='Sphere Phantom')
 
         # Check if the phantom is correct
         # assert np.sum(phantom_3d) == 523598
@@ -55,7 +55,7 @@ class TestMasks(unittest.TestCase):
         assert phantom_3d.shape == (100, 100, 100)
 
         # visualization
-        vis.scatter3d(X_axis, Y_axis, Z_axis, phantom_3d, title='Breast Mask', mask=abs(phantom_3d) > 0)
+        vis.scatter3d(phantom_3d, X_axis, Y_axis, Z_axis, mask=abs(phantom_3d) > 0, title='Breast Mask')
 
         # Check if the phantom is correct
         # assert np.sum(phantom_3d) == 523598
@@ -79,7 +79,7 @@ class TestMasks(unittest.TestCase):
         z = np.arange(3)
 
         # Use mask2matrix to convert the data to a 3D matrix
-        data_matrix = mk.mask2matrix(masked_data, mask, x, y, z)
+        data_matrix = mk.mask2matrix(masked_data, mask, (len(x), len(y), len(z)))
 
         # Check if the output dimensions are correct
         assert data_matrix.shape == (3, 3, 3)
@@ -104,7 +104,7 @@ class TestMasks(unittest.TestCase):
         z = np.arange(3)
 
         # Use mask2matrix to convert the data to a 3D matrix
-        data_matrix = mk.mask2matrix(masked_data, mask, x, y, z)
+        data_matrix = mk.mask2matrix(masked_data, mask, (len(x), len(y), len(z)))
 
         # Check if the output dimensions are correct
         assert data_matrix.shape == data_shape
