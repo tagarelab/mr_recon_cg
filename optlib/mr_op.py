@@ -38,25 +38,18 @@ class rotation_op(ops.operator):
         return np.einsum('ijk,ki->ji', rot_mats_T, y)
 
 
-# class phase_encoding_op(ops.operator):
-#     # TODO: replace this with a simple "gen_PE_op" function in sim
-#     def __init__(self, B_net, t_PE, gyro_ratio=gamma, larmor_freq=1e6):
-#         axes, angles = algb.get_rotation_to_vector(vectors=B_net,
-#                                                    target_vectors=[0, 0, 1])
-#         rot_z = rotation_op(axes, angles)  # rotate B_net_VOI to z-axis
-#
-#         evol_angle = (gyro_ratio * rot_z.forward(B_net)[2, :] - larmor_freq) * t_PE * np.pi * 2
-#         evol_rot = rotation_op(np.array([0, 0, 1]), evol_angle)
-#         self.pe_rot = ops.composite_op(ops.transposed_op(rot_z), evol_rot, rot_z)
-#
-#         self.x_shape = self.pe_rot.get_x_shape()
-#         self.y_shape = self.pe_rot.get_y_shape()
-#
-#     def forward(self, x):
-#         return self.pe_rot.forward(x)
-#
-#     def transpose(self, y):
-#         return self.pe_rot.transpose(y)
+class polarization_op(ops.operator):
+    def __init__(self, B_net):
+        self.B_net = B_net
+        self.x_shape = (B_net.shape[1],)
+        self.y_shape = B_net.shape
+
+    def forward(self, x):
+        return self.B_net * x
+
+    def transpose(self, y):
+        return np.sum(self.B_net * y, axis=0)
+
 
 
 class phase_encoding_op(ops.operator):
@@ -161,12 +154,13 @@ class projection_op(ops.operator):
     Takes an array of points in 3D space and projects them onto a 2D plane.
     """
 
-    def __init__(self, mask_3D):
+    def __init__(self, mask_3D, projection_axis=2):
         self.mask_3D = mask_3D
-        self.mask_tkns = np.sum(mask_3D, axis=2)
+        self.mask_tkns = np.sum(mask_3D, axis=projection_axis)
         self.mask_2D = self.mask_tkns > 0
         self.x_shape = (np.sum(self.mask_3D),)  # default shape of x
         self.y_shape = (np.sum(self.mask_2D),)  # default shape of y
+        self.projection_axis = projection_axis
 
     def forward(self, x):
         # Initialize y with the same shape as mask_tkns but with floating point type to handle division
@@ -174,8 +168,9 @@ class projection_op(ops.operator):
 
         # Get matrix representation of x
         x_matrix = mks.mask2matrix(x, self.mask_3D, matrix_shape=self.mask_3D.shape)
-        y_matrix = np.sum(x_matrix, axis=2)
+        y_matrix = np.sum(x_matrix, axis=self.projection_axis)
         y = y_matrix[self.mask_2D] / self.mask_tkns[self.mask_2D]
+        # y = y_matrix[self.mask_2D]
 
         # # Populate y with the sum of points in x divided by mask_tkns
         # index_x = 0
@@ -193,8 +188,10 @@ class projection_op(ops.operator):
         # x = np.zeros(self.x_shape, dtype=y.dtype)
 
         # Get matrix representation of y
-        y_matrix = mks.mask2matrix(y, self.mask_2D, matrix_shape=self.mask_2D.shape)
-        x_matrix = np.repeat(y_matrix, self.mask_3D.shape[2], axis=2)
+        y = y / self.mask_tkns[self.mask_2D]
+        y_matrix = np.expand_dims(mks.mask2matrix(y, self.mask_2D, matrix_shape=self.mask_2D.shape),
+                                  axis=self.projection_axis)
+        x_matrix = np.repeat(y_matrix, self.mask_3D.shape[self.projection_axis], axis=self.projection_axis)
         x = x_matrix[self.mask_3D]
 
         # # Populate x

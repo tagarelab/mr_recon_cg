@@ -8,7 +8,7 @@
 from unittest import TestCase
 import numpy as np
 import test_operators as test_ops
-from optlib import mr_op as mr_op
+from optlib import mr_op as mr_op, operators as ops
 import visualization as vis
 import algebra as algb
 from sim import masks as mks
@@ -16,7 +16,7 @@ from sim import masks as mks
 
 class Test_rotation_op(TestCase):
     def test_adjoint_property(self):
-        # gnerate a random rotation operator
+        # generate a random rotation operator
         axes = np.random.rand(3, 10)
         angles = np.random.rand(10)
         op = mr_op.rotation_op(axes, angles)
@@ -65,9 +65,10 @@ class Test_projection_op(TestCase):
     def test_adjoint_property(self):
         # generate a random projection operator
         # generate random 3D boolean mask
-        mask = np.random.rand(10, 10, 10) > 0.5
-        op = mr_op.projection_op(mask_3D=mask)
+        mask = np.random.rand(101, 101, 101) > 0.8
+        op = mr_op.projection_op(mask_3D=mask, projection_axis=2)
         test_ops.test_adjoint_property(op)
+        # test_ops.test_adjoint_property(ops.transposed_op(op))
 
     def test_forward(self):
         # Create sample data (3D array
@@ -98,8 +99,24 @@ class Test_projection_op(TestCase):
 
         # Check that the output has the correct values
         x_matrix = mks.mask2matrix(x, mask_3D, matrix_shape=data_shape)
-        y_expected = np.sum(x_matrix, axis=2)
-        pass
+        y_expected = np.sum(x_matrix, axis=2) / np.sum(mask_3D, axis=2)
+        y_expected = y_expected[~np.isnan(y_expected)]
+        np.testing.assert_allclose(y, y_expected)
 
     def test_transpose(self):
         pass
+
+
+class Test_polarization_op(TestCase):
+
+    def test_adjoint_property(self):
+        # generate a random polarization operator
+        B_net = np.random.rand(3, 10)
+        op = mr_op.polarization_op(B_net)
+        test_ops.test_adjoint_property(op)
+
+    def test_forward(self):
+        self.fail()
+
+    def test_transpose(self):
+        self.fail()

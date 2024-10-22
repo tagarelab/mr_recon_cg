@@ -220,23 +220,7 @@ LR_cut = (X_M > -3) & (X_M < 3)
 VOI = breast_mask & slice
 
 # %% Back projection operator
-# class back_projection_op:
-#     def __init__(self, VOI):
-#         self.VOI = VOI
-#         data = np.ones(VOI.shape)
-#         mk.mask2matrix(data, VOI, X_axis, Y_axis, Z_axis)
-#
-#     def forward(self, x):
-#         # transform x back to the original shape
-#         result = np.zeros_like(self.VOI, dtype=x.dtype)
-#
-#         return x[self.mask]
-#
-#     def transpose(self, x):
-#
-#         result = np.zeros_like(self.mask, dtype=x.dtype)
-#         result[self.mask] = x
-#         return result
+BP = ops.transposed_op(mr_op.projection_op(mask_3D=VOI, projection_axis=2))
 
 # %% Object
 phantom_VOI = phantom[VOI]
@@ -247,9 +231,14 @@ T2_VOI = np.ones(len(phantom_VOI)) * T2
 
 O = phantom_VOI
 
+# % Visualize
+vis.scatter3d(O, X_axis, Y_axis, Z_axis, xlim=xlim, ylim=ylim, zlim=zlim, title='Phantom 3D', mask=VOI)
+vis.scatter2d(BP.transpose(O), X_axis, Y_axis, xlim=xlim, ylim=ylim, mask=np.sum(VOI, axis=2) > 0, title='Phantom 2D')
+
 # %% Polarization
 B0_VOI = B0_raw[:, VOI]
-P = ops.hadamard_op(B0_VOI * DC_pol)
+# P = ops.hadamard_op(B0_VOI * DC_pol)
+P = mr_op.polarization_op(B0_VOI * DC_pol)
 
 # sanity check
 # B0_VOI_2mat = mk.mask2matrix(B0_VOI, VOI, X_axis, Y_axis, Z_axis)
@@ -368,19 +357,23 @@ vis.plot_against_frequency(signal, frag_len=len(signal), dt=dt, name='Image')
 # Measured Signal
 
 # %% Combined Operator
-A = ops.composite_op(D, PE, X, P)
+A = ops.composite_op(D, PE, X, P, BP)
 
 # %% Adjoint Tests
-# if test_ops.test_adjoint_property(op_instance=P):
-#     print('P passed the adjoint test')
-# if test_ops.test_adjoint_property(op_instance=X):
-#     print('X passed the adjoint test')
-# if test_ops.test_adjoint_property(op_instance=PE):
-#     print('PE passed the adjoint test')
-# if test_ops.test_adjoint_property(op_instance=D):
-#     print('D passed the adjoint test')
-# if test_ops.test_adjoint_property(op_instance=A):
-#     print('A passed the adjoint test')
-
+if test_ops.test_adjoint_property(op_instance=BP):
+    print('BP passed the adjoint test')
+if test_ops.test_adjoint_property(op_instance=P):
+    print('P passed the adjoint test')
+if test_ops.test_adjoint_property(op_instance=X):
+    print('X passed the adjoint test')
+if test_ops.test_adjoint_property(op_instance=PE):
+    print('PE passed the adjoint test')
+if test_ops.test_adjoint_property(op_instance=D):
+    print('D passed the adjoint test')
+if test_ops.test_adjoint_property(op_instance=A):
+    print('A passed the adjoint test')
 
 # %% Reconstruction
+simple_recon = A.transpose(concat_sig)
+vis.scatter2d(simple_recon, X_axis, Y_axis, xlim=xlim, ylim=ylim, mask=np.sum(VOI, axis=2) > 0,
+              title='Simple Reconstruction')
