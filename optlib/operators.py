@@ -253,3 +253,41 @@ class add_op(operator):
         for op in self.ops:
             y += op.transpose(x)
         return y
+
+
+class apply_on_list(operator):
+    """
+        Applies an operator on a list of inputs
+    """
+
+    def __init__(self, op):
+        self.op = op
+        self.x_shape = op.get_x_shape()
+        self.y_shape = op.get_y_shape()
+        self.x_dtype = op.get_x_dtype()
+        self.y_dtype = op.get_y_dtype()
+
+    def forward(self, x):
+        return [self.op.forward(x_i) for x_i in x]
+
+    def transpose(self, y):
+        return [self.op.transpose(y_i) for y_i in y]
+
+
+class list_op(operator):
+    """
+        Creates a list of operators that are executed respectively and outputs a list of outputs
+    """
+
+    def __init__(self, op, op_init_list):
+        self.ops = [op(op_init) for op_init in op_init_list]
+        self.x_shape = self.ops[0].get_x_shape()
+        self.y_shape = self.ops[0].get_y_shape()
+        self.x_dtype = self.ops[0].get_x_dtype()
+        self.y_dtype = list
+
+    def forward(self, x):
+        return [op.forward(x) for op in self.ops]
+
+    def transpose(self, y):
+        return np.sum(np.array([op.transpose(y) for op in self.ops]), axis=0)
