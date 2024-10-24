@@ -68,6 +68,24 @@ class phase_encoding_op(ops.operator):
         return self.pe_rot.transpose(y)
 
 
+class phase_encoding_op_list(ops.operator):
+    # The no-rotation-to-z-axis version of the phase encoding operator
+    def __init__(self, B_net, t_PE, gyro_ratio=gamma, larmor_freq=1e6):
+        self.pe_rot_list = [rotation_op(B_net, (gyro_ratio * np.linalg.norm(B_net, axis=0) - larmor_freq) * t_PE_i *
+                                        np.pi * 2) for t_PE_i in t_PE]
+
+        self.x_shape = self.pe_rot_list[0].get_x_shape()
+        self.y_shape = self.pe_rot_list[0].get_y_shape()
+        self.x_dtype = self.pe_rot_list[0].get_x_dtype()
+        self.y_dtype = list
+
+    def forward(self, x):
+        return [pe_rot.forward(x) for pe_rot in self.pe_rot_list]
+
+    def transpose(self, y):
+        return np.sum(np.array([pe_rot.transpose(y_i) for pe_rot, y_i in zip(self.pe_rot_list, y)]), axis=0)
+
+
 class detection_op(ops.operator):
     def __init__(self, B_net, t, sensi_mats=None, larmor_freq=1e6, T1_mat=None, T2_mat=None):
         axes, angles = algb.get_rotation_to_vector(vectors=B_net,
@@ -132,12 +150,8 @@ class detection_op(ops.operator):
 
         return y
 
-    # for each magnetization point and time point, calculate the signal
-    # return acq.detect_signal(x, self.B, self.C, self.t, T1=self.T1, T2=self.T2)
-
-    # Change coordinates to net B point to z-axis for M and C
     def transpose(self, y):
-        y = y[0, :, :] + 1j * y[1, :, :]  # TODO: bug here
+        y = y[0, :, :] + 1j * y[1, :, :]
         # initialize x
         x_comp = np.zeros((self.x_shape[1], self.y_shape[2]), dtype=complex)
         for c in range(self.y_shape[2]):
@@ -169,8 +183,8 @@ class projection_op(ops.operator):
         # Get matrix representation of x
         x_matrix = mks.mask2matrix(x, self.mask_3D, matrix_shape=self.mask_3D.shape)
         y_matrix = np.sum(x_matrix, axis=self.projection_axis)
-        y = y_matrix[self.mask_2D] / self.mask_tkns[self.mask_2D]
-        # y = y_matrix[self.mask_2D]
+        # y = y_matrix[self.mask_2D] / self.mask_tkns[self.mask_2D]
+        y = y_matrix[self.mask_2D]
 
         # # Populate y with the sum of points in x divided by mask_tkns
         # index_x = 0
@@ -188,7 +202,7 @@ class projection_op(ops.operator):
         # x = np.zeros(self.x_shape, dtype=y.dtype)
 
         # Get matrix representation of y
-        y = y / self.mask_tkns[self.mask_2D]
+        # y = y / self.mask_tkns[self.mask_2D]
         y_matrix = np.expand_dims(mks.mask2matrix(y, self.mask_2D, matrix_shape=self.mask_2D.shape),
                                   axis=self.projection_axis)
         x_matrix = np.repeat(y_matrix, self.mask_3D.shape[self.projection_axis], axis=self.projection_axis)
