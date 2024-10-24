@@ -543,18 +543,22 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop
                                              Disp_Intermediate=Disp_Intermediate)
         lambda_best = lambda_max
         while lambda_max - lambda_min > 10000:  # todo: set this parameter elsewhere
-            print("Lambda range: ", lambda_max, lambda_min)
+            if Disp_Intermediate:
+                print("Lambda range: ", lambda_max, lambda_min)
             lambda_vals = np.linspace(lambda_min, lambda_max, 10)
             j2_lambda = np.zeros(len(lambda_vals))
             for i in range(len(lambda_vals)):
-                print("Processing lambda: %d out of %d" % (i, len(lambda_vals)))
+                if Disp_Intermediate:
+                    print("Processing lambda: %d out of %d" % (i, len(lambda_vals)))
                 emi_prdct = sn_recognition(signal=zfilled_data, mask=noi_all, lambda_val=lambda_vals[i], tol=tol,
                                            max_iter=max_iter,
                                            method=method, rho=rho)
                 # vis.freq_plot(emi_prdct, dt=dt, name='EMI pred lambda = %10.3E' % lambda_vals[i])
                 j2_lambda[i] = find_j2(predict=emi_prdct, true=zfilled_data, mask=sig_all)
-                print("J2: ", j2_lambda[i])
-            vis.plot2d(lambda_vals, j2_lambda, title="J2 vs Lambda", xlabel="Lambda", ylabel="J2")
+                if Disp_Intermediate:
+                    print("J2: ", j2_lambda[i])
+            if Disp_Intermediate:
+                vis.plot2d(lambda_vals, j2_lambda, title="J2 vs Lambda", xlabel="Lambda", ylabel="J2")
             lambda_max = lambda_vals[np.argmin(j2_lambda) + 1]
             lambda_min = lambda_vals[np.argmin(j2_lambda) - 1]
             lambda_best = lambda_vals[np.argmin(j2_lambda)]
@@ -562,8 +566,9 @@ def comb_optimized(signal, N_echoes, TE, dt, lambda_val, tol, max_iter, pre_drop
         emi_prdct_tot = sn_recognition(signal=zfilled_data, mask=noi_all, lambda_val=lambda_best, tol=tol,
                                        max_iter=max_iter,
                                        method=method, rho=rho)
-        print("Done. Best lambda: ", lambda_best)
-        vis.freq_plot(emi_prdct_tot, dt=dt, name='EMI pred lambda = %10.3E' % lambda_best)
+        if Disp_Intermediate:
+            print("Done. Best lambda: ", lambda_best)
+            vis.freq_plot(emi_prdct_tot, dt=dt, name='EMI pred lambda = %10.3E' % lambda_best)
 
     else:
         if lambda_val == -1:
