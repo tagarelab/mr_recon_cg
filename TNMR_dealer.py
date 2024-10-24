@@ -36,9 +36,15 @@ def scan_2_mat(loc=None, interleave=None, N_ch=None, rep=None, name=None, seg=No
     else:
         tnt_data = TNTfile(loc + name + '1.tnt')
 
+    # data = np.zeros(tnt_data.shape, dtype='complex')
     data = sort_channels(tnt_data, interleave)
     ch_len = get_ch_len(data, N_ch)
     seg_len = int(ch_len / seg)
+    if data.ndim == 2:
+        if seg == 1:
+            seg = data.shape[1]
+        else:
+            raise ValueError('Not supported for save data as a different number of segments if the data is 2D.')
 
     if disp_msg:
         print('Output matrix size per channel:\n repetition axis: {0:d}, data axis: {1:d}\n'.format(rep * seg, seg_len))
@@ -52,16 +58,24 @@ def scan_2_mat(loc=None, interleave=None, N_ch=None, rep=None, name=None, seg=No
         if rep == 1:
             tnt_data = TNTfile(loc + name + '.tnt')
             data = sort_channels(tnt_data, interleave)
-            data_2d = np.transpose(data.reshape(int(N_ch * seg), seg_len))
-            for j in range(N_ch):
-                data_mat[:, :, j] = data_2d[:, j * seg:(j + 1) * seg]
+            if data.ndim == 1:
+                data_2d = np.transpose(data.reshape(int(N_ch * seg), seg_len))
+                for j in range(N_ch):
+                    data_mat[:, :, j] = data_2d[:, j * seg:(j + 1) * seg]
+            elif data.ndim == 2:
+                data_2d = data
+                for j in range(N_ch):
+                    data_mat[:, :, j] = data_2d[j * seg_len:(j + 1) * seg_len, :]
         else:
             for i in range(rep):
                 tnt_data = TNTfile(loc + name + str(i + 1) + '.tnt')
                 data = sort_channels(tnt_data, interleave)
-                data_2d = np.transpose(data.reshape(int(N_ch * seg), seg_len))
-                for j in range(N_ch):
-                    data_mat[:, i * seg:(i + 1) * seg, j] = data_2d[:, j * seg:(j + 1) * seg]
+                if data.ndim == 1:
+                    data_2d = np.transpose(data.reshape(int(N_ch * seg), seg_len))
+                    for j in range(N_ch):
+                        data_mat[:, i * seg:(i + 1) * seg, j] = data_2d[:, j * seg:(j + 1) * seg]
+                elif data.ndim == 2:
+                    raise RuntimeError('Not implemented for saving 2D data with multiple reps.')
 
         mdic = {}
         for j in range(N_ch):
@@ -98,21 +112,65 @@ def read_tnt_1d(tnt):
     return tnt.DATA.reshape(-1)
 
 
+def read_tnt_squeezed(tnt):
+    """
+    Read the 1-d data in tnt file and squeeze it
+    :param tnt: the tnt file with the data
+    :return: 1-d memmap array with the data
+    """
+    return np.squeeze(tnt.DATA)
+
+
+# def sort_channels(tnt, interleave=4):
+#     """Sort the channels in tnt file with a given interleave
+#
+#     Args:
+#         tnt (tnt): the tnt file with the data.
+#
+#     Returns:
+#         data_sorted: sorted memmap array.
+#
+#     """
+#     data_raw = np.squeeze(tnt.DATA)
+#     data_length = data_raw.shape[0]
+#     data_sorted = np.array([])
+#
+#     for i in range(interleave):
+#         data_sorted = np.concatenate((data_sorted, data_raw[i:data_length:interleave]))
+#
+#     return data_sorted
+
+
 def sort_channels(tnt, interleave=4):
-    """Sort the channels in tnt file with a given interleave
+    """Sort the channels in tnt file with a given interleave, processing only the first dimension.
 
     Args:
-        tnt (tnt): the tnt file with the data.
+        tnt (object): the tnt file object with the data.
+        interleave (int, optional): the interleave value to use. Defaults to 4.
 
     Returns:
-        data_sorted: sorted memmap array.
-
+        np.ndarray: sorted memmap array.
     """
-    data_raw = read_tnt_1d(tnt)
-    data_length = len(data_raw)
-    data_sorted = np.array([])
+    data_raw = np.squeeze(tnt.DATA)  # Assuming tnt.DATA is a numpy array
+    data_length = data_raw.shape[0]
 
+    # Check if interleave is compatible with data length
+    if interleave < 1 or interleave > data_length:
+        raise ValueError("Interleave must be between 1 and the length of the data.")
+
+    # Calculate the size of the new sorted array
+    sorted_length = (data_length // interleave) * interleave
+
+    # Initialize an empty array with the required shape
+    data_sorted_shape = (sorted_length,) + data_raw.shape[1:]
+    data_sorted = np.empty(data_sorted_shape, dtype=data_raw.dtype)
+
+    index = 0
     for i in range(interleave):
-        data_sorted = np.concatenate((data_sorted, data_raw[i:data_length:interleave]))
+        selected_data = data_raw[i:data_length:interleave]
+        num_elements = selected_data.shape[0]
+
+        data_sorted[index:index + num_elements] = selected_data
+        index += num_elements
 
     return data_sorted
